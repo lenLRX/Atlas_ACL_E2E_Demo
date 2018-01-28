@@ -22,7 +22,7 @@ endif()
 message(STATUS "build with libmedia ${HAS_LIBMEDIA}")
 
 #Compile options
-add_compile_options(-std=c++17 -g -O0)
+add_compile_options(-std=c++17 -O2)
 
 find_package(Freetype REQUIRED)
 
@@ -47,7 +47,8 @@ endif()
 include_directories(
 	/usr/local/Ascend/include # for peripheral_api.h
 	${ACL_PATH}/include # acl hearders
-        /usr/include/python3.6 # for numpy headers
+        /usr/include/python3.6 # for python headers
+        /usr/local/lib/python3.6/dist-packages/numpy/core/include/ # for pip installed numpy headers
         ${CMAKE_SOURCE_DIR}/src
         ${FREETYPE_INCLUDE_DIRS})
 
@@ -75,6 +76,7 @@ set(DEMO_LIB_SRC
         src/app_profiler.cpp
         src/yolov3_stream.cpp
         src/yolov4_stream.cpp
+        src/yolov5_stream.cpp
         src/signal_handler.cpp
         src/deep_sort_stream.cpp
         src/stream_factory.cpp
@@ -95,6 +97,7 @@ set(DEMO_DEP_LIBS
         opencv_core
         opencv_imgproc
         opencv_videoio
+        opencv_imgcodecs
         avformat
         avutil
         avcodec

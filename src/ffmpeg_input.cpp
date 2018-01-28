@@ -168,8 +168,8 @@ bool FFMPEGInput::ReceiveSinglePacket() {
 }
 
 bool FFMPEGInput::ReceivePacketWithBSF() {
-  auto perf_obj = AppProfileGuard("FFMPEGInput::ReceivePacketWithBSF", __FILE__,
-                                  __LINE__, false);
+  AppProfileGuard perf_obj("FFMPEGInput::ReceivePacketWithBSF", __FILE__,
+                            __LINE__, false);
   perf_obj.AddBeginRecord();
   AVPacket packet;
   av_init_packet(&packet);

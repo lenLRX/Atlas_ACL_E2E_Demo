@@ -133,7 +133,7 @@ thread_local std::string profiler_stream_name;
 
 const std::string &GetThreadName() { return profiler_thread_name; }
 
-const std::string &GetStreamName() { profiler_stream_name; }
+const std::string &GetStreamName() { return profiler_stream_name; }
 
 void SetThreadName(const std::string &thread_name) {
   profiler_thread_name = thread_name;
