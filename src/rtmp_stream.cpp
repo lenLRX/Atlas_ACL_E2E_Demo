@@ -3,18 +3,22 @@
 #include <iostream>
 
 
-int RtmpContext::Init() {
-const char* codec_name = "libx265";
-  const char* output = "rtmp://127.0.0.1/live/stream";
+int RtmpContext::Init(std::string name, int img_h, int img_w) {
+  std::string base_addr = "rtmp://127.0.0.1:1935/myapp/";
+  stream_name = base_addr + name;
+  const char* codec_name = "libx265";
+  const char* output = stream_name.c_str();
   const char* profile = "high444";
+  
+  av_register_all();
   avformat_network_init();
-  av_log_set_level(AV_LOG_DEBUG);
+  //av_log_set_level(AV_LOG_DEBUG);
   int ret=0;
 
   encoder_avfc = NULL;
-  ret = avformat_alloc_output_context2(&encoder_avfc, NULL, "flv", NULL);
+  ret = avformat_alloc_output_context2(&encoder_avfc, NULL, "flv", output);
   if (ret < 0) {
-      std::cerr << "[RtmpContext::Init] avformat_alloc_output_context2 failed" << std::endl;
+      std::cerr << "[RtmpContext::Init] avformat_alloc_output_context2 failed"<< ret << std::endl;
       return ret;
   }
 
@@ -41,8 +45,8 @@ const char* codec_name = "libx265";
   video_avcc->codec_id = AV_CODEC_ID_H264;
   video_avcc->codec_type = AVMEDIA_TYPE_VIDEO;
   video_avcc->gop_size = 12;
-  video_avcc->height = 720;
-  video_avcc->width = 1280;
+  video_avcc->height = img_h;
+  video_avcc->width = img_w;
   video_avcc->pix_fmt = AV_PIX_FMT_NV12;// NV12 IS YUV420
   // control rate
   video_avcc->bit_rate = 2 * 1000 * 1000;
@@ -105,7 +109,7 @@ bool RtmpContext::IsValid() {
     return valid;
 }
 
-void RtmpContext::SendFrame(uint8_t* pdata) {
+void RtmpContext::SendFrame(const uint8_t* pdata) {
   int ret = 0;
   av_image_fill_arrays(video_frame->data, video_frame->linesize,
     pdata,video_avcc->pix_fmt, video_avcc->width, video_avcc->height, 1);

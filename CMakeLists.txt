@@ -9,6 +9,7 @@ project(acl_cam)
 # Compile options
 add_compile_options(-std=c++11 -g -O0)
 
+add_definitions(-DENABLE_DVPP_INTERFACE)
 
 #set(CMAKE_SKIP_RPATH TRUE)
 
@@ -28,10 +29,13 @@ link_directories(
 
 add_executable(acl_cam
         src/main.cpp
-        src/rtmp_stream.cpp)
+        src/rtmp_stream.cpp
+        src/vpc_resize.cpp)
 
 target_link_libraries(acl_cam
         ascendcl
+        acl_dvpp
+        runtime
         /usr/lib64/libslog.so
         /usr/lib64/libc_sec.so
         /usr/lib64/libmedia_mini.so

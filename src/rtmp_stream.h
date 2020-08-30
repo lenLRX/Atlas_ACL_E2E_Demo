@@ -1,6 +1,6 @@
 
-#ifndef __FFMPEG_STREAM_H__
-#define __FFMPEG_STREAM_H__
+#ifndef __RTMP_STREAM_H__
+#define __RTMP_STREAM_H__
 
 extern "C" {
 #include "libavformat/avformat.h"
@@ -8,14 +8,16 @@ extern "C" {
 #include "libavutil/imgutils.h"
 }
 
+#include <string>
+
 class RtmpContext {
 public:
     RtmpContext() = default;
 
-    int Init();
+    int Init(std::string name, int img_h, int img_w);
     bool IsValid();
 
-    void SendFrame(uint8_t* pdata);
+    void SendFrame(const uint8_t* pdata);
 
 private:
     AVFormatContext* encoder_avfc;
@@ -25,10 +27,13 @@ private:
     AVDictionary *codec_options;
     AVFrame* video_frame;
 
+    std::string stream_name;
+    int h;
+    int w;
+
     bool valid{false};
 };
 
-void ffmpeg_test(uint8_t* pdata);
 
-#endif//__FFMPEG_STREAM_H__
+#endif//__RTMP_STREAM_H__
 
