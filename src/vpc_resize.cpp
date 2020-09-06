@@ -46,7 +46,7 @@ aclError VPCResizeEngine::Init(int src_h, int src_w, int dst_h, int dst_w) {
 }
 
 aclError VPCResizeEngine::Resize(const uint8_t* pdata, int size) {
-    std::cerr << "input_buffer_size: " << input_buffer_size << std::endl;
+    //std::cerr << "input_buffer_size: " << input_buffer_size << std::endl;
     memcpy(dvpp_input_mem, pdata, input_buffer_size);
     CHECK_ACL(acldvppVpcResizeAsync(channel_desc, input_desc,
         output_desc, resize_config, stream));

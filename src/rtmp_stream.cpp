@@ -140,9 +140,6 @@ void RtmpContext::SendFrame(const uint8_t* pdata) {
 
     av_packet_unref(&pkt);
 
-
-  std::cerr << "[RtmpContext::SendFrame] SendFrame!" << std::endl;
-
   video_frame->pts += av_rescale_q(1, video_avcc->time_base, avs->time_base);
 }
 

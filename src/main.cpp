@@ -9,6 +9,7 @@ extern "C" {
 
 #include "rtmp_stream.h"
 #include "vpc_resize.h"
+#include "acl_model.h"
 #include "util.h"
 
 class CameraCtx {
@@ -16,17 +17,22 @@ public:
     VPCResizeEngine* resize;
     RtmpContext* rtmp;
     RtmpContext* resize_rtmp;
+    ACLModel* model;
     aclrtContext* dev_ctx;
 };
 
 
 int CameraCallBack(const void* pdata, int size, void* param) {
-    std::cerr << "CameraCallBack size: " << size << std::endl;
+    //std::cerr << "CameraCallBack size: " << size << std::endl;
     CameraCtx* ctx = (CameraCtx*)param;
     CHECK_ACL(aclrtSetCurrentContext(*(ctx->dev_ctx)));
     ctx->rtmp->SendFrame((const uint8_t*)pdata);
     CHECK_ACL(ctx->resize->Resize((const uint8_t*)pdata, size));
-    ctx->resize_rtmp->SendFrame((const uint8_t*)ctx->resize->GetOutputBuffer());
+    const uint8_t* resized_buffer = (const uint8_t*)ctx->resize->GetOutputBuffer();
+    ctx->resize_rtmp->SendFrame(resized_buffer);
+    const auto& input_buffers = ctx->model->GetInputBuffer();
+    memcpy(input_buffers[0], resized_buffer, ctx->model->GetInputBufferSizes()[0]);
+    ctx->model->Infer();
     return 1;
 }
 
@@ -113,11 +119,18 @@ int main(int argc, char** argv) {
     RtmpContext resized_ctx;
     ret = resized_ctx.Init("resize", 416, 416);
 
+    ACLModel model(stream);
+    model.Init("./model/sample-yolov3.om");
+
+    std::cout << "Model Info:" << std::endl;
+    std::cout << model.ToString();
+
     CameraCtx camera_ctx;
     camera_ctx.resize = &resize_engine;
     camera_ctx.rtmp = &rtmp_ctx;
     camera_ctx.resize_rtmp = &resized_ctx;
     camera_ctx.dev_ctx = &ctx;
+    camera_ctx.model = &model;
 
     
     ret = CapCamera(0, CameraCallBack, &camera_ctx);

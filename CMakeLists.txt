@@ -29,6 +29,7 @@ link_directories(
 
 add_executable(acl_cam
         src/main.cpp
+        src/acl_model.cpp
         src/rtmp_stream.cpp
         src/vpc_resize.cpp)
 
