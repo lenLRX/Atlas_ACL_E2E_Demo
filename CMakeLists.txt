@@ -31,7 +31,8 @@ add_executable(acl_cam
         src/main.cpp
         src/acl_model.cpp
         src/rtmp_stream.cpp
-        src/vpc_resize.cpp)
+        src/vpc_resize.cpp
+        src/yolov3_post.cpp)
 
 target_link_libraries(acl_cam
         ascendcl
@@ -40,6 +41,7 @@ target_link_libraries(acl_cam
         /usr/lib64/libslog.so
         /usr/lib64/libc_sec.so
         /usr/lib64/libmedia_mini.so
+        opencv_core
         avformat
         avutil
         avcodec)

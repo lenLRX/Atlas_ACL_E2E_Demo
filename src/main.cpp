@@ -11,6 +11,9 @@ extern "C" {
 #include "vpc_resize.h"
 #include "acl_model.h"
 #include "util.h"
+#include "yolov3_post.h"
+
+const static int yolov3_model_size = 416;
 
 class CameraCtx {
 public:
@@ -33,6 +36,8 @@ int CameraCallBack(const void* pdata, int size, void* param) {
     const auto& input_buffers = ctx->model->GetInputBuffer();
     memcpy(input_buffers[0], resized_buffer, ctx->model->GetInputBufferSizes()[0]);
     ctx->model->Infer();
+    yolov3_post(0.45, ctx->model->GetOutputBuffer(), ctx->model->GetOutputBufferSizes(),
+        yolov3_model_size, yolov3_model_size);
     return 1;
 }
 
@@ -114,10 +119,10 @@ int main(int argc, char** argv) {
 
     VPCResizeEngine resize_engine(stream);
 
-    resize_engine.Init(720, 1280, 416, 416);
+    resize_engine.Init(720, 1280, yolov3_model_size, yolov3_model_size);
 
     RtmpContext resized_ctx;
-    ret = resized_ctx.Init("resize", 416, 416);
+    ret = resized_ctx.Init("resize", yolov3_model_size, yolov3_model_size);
 
     ACLModel model(stream);
     model.Init("./model/sample-yolov3.om");
