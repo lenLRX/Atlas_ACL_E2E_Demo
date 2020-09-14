@@ -45,3 +45,23 @@ target_link_libraries(acl_cam
         avformat
         avutil
         avcodec)
+
+
+add_executable(acl_cam_yolov3_pp
+        src/main_yolov3_pp.cpp
+        src/acl_model.cpp
+        src/rtmp_stream.cpp
+        src/vpc_resize.cpp
+        src/yolov3_post.cpp)
+
+target_link_libraries(acl_cam_yolov3_pp
+        ascendcl
+        acl_dvpp
+        runtime
+        /usr/lib64/libslog.so
+        /usr/lib64/libc_sec.so
+        /usr/lib64/libmedia_mini.so
+        opencv_core
+        avformat
+        avutil
+        avcodec)

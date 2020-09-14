@@ -30,32 +30,38 @@ int CameraCallBack(const void* pdata, int size, void* param) {
     CameraCtx* ctx = (CameraCtx*)param;
     CHECK_ACL(aclrtSetCurrentContext(*(ctx->dev_ctx)));
     {
-        PERF_TIMER();
+        //PERF_TIMER();
         ctx->rtmp->SendFrame((const uint8_t*)pdata);
     }
     {
-        PERF_TIMER();
+        //PERF_TIMER();
         CHECK_ACL(ctx->resize->Resize((const uint8_t*)pdata, size));
     }
     
     const uint8_t* resized_buffer = (const uint8_t*)ctx->resize->GetOutputBuffer();
     {
-        PERF_TIMER();
+        //PERF_TIMER();
         ctx->resize_rtmp->SendFrame(resized_buffer);
     }
     
     const auto& input_buffers = ctx->model->GetInputBuffer();
     memcpy(input_buffers[0], resized_buffer, ctx->model->GetInputBufferSizes()[0]);
+    uint32_t* img_info = (uint32_t*)input_buffers[1];
+    img_info[0] = yolov3_model_size;
+    img_info[1] = yolov3_model_size;
+    img_info[2] = 720;// scale H
+    img_info[3] = 1280;// scale W
     {
-        PERF_TIMER();
+        //PERF_TIMER();
         ctx->model->Infer();
     }
-    
-    {
-        PERF_TIMER();
-        yolov3_post(0.45, ctx->model->GetOutputBuffer(), ctx->model->GetOutputBufferSizes(),
-            yolov3_model_size, yolov3_model_size);
-    }
+
+    int post_nms_num = 1024;
+    const auto& output_buffers = ctx->model->GetOutputBuffer();
+    float* box_info = (float*)output_buffers[0];
+    int32_t box_out_num = ((int32_t*)output_buffers[1])[0];
+
+    std::cout << "result box num:" << box_out_num << std::endl;
     
     return 1;
 }
@@ -144,7 +150,7 @@ int main(int argc, char** argv) {
     ret = resized_ctx.Init("resize", yolov3_model_size, 512);
 
     ACLModel model(stream);
-    model.Init("./model/sample-yolov3.om");
+    model.Init("./model/sample-yolov3_pp.om");
 
     std::cout << "Model Info:" << std::endl;
     std::cout << model.ToString();
