@@ -3,7 +3,7 @@
 #include <iostream>
 
 
-int RtmpContext::Init(std::string name, int img_h, int img_w) {
+int RtmpContext::Init(std::string name, int img_h, int img_w, int pic_fmt) {
   std::string base_addr = "rtmp://127.0.0.1:1935/myapp/";
   stream_name = base_addr + name;
   const char* codec_name = "libx265";
@@ -47,7 +47,7 @@ int RtmpContext::Init(std::string name, int img_h, int img_w) {
   video_avcc->gop_size = 12;
   video_avcc->height = img_h;
   video_avcc->width = img_w;
-  video_avcc->pix_fmt = AV_PIX_FMT_NV12;// NV12 IS YUV420
+  video_avcc->pix_fmt = (AVPixelFormat)pic_fmt;// AV_PIX_FMT_NV12;// NV12 IS YUV420
   // control rate
   video_avcc->bit_rate = 2 * 1000 * 1000;
   video_avcc->rc_buffer_size = 4 * 1000 * 1000;

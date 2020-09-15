@@ -12,6 +12,7 @@ extern "C" {
 #include "acl_model.h"
 #include "util.h"
 #include "yolov3_post.h"
+#include "opencv2/opencv.hpp"
 
 const static int yolov3_model_size = 416;
 
@@ -29,10 +30,12 @@ int CameraCallBack(const void* pdata, int size, void* param) {
     //std::cerr << "CameraCallBack size: " << size << std::endl;
     CameraCtx* ctx = (CameraCtx*)param;
     CHECK_ACL(aclrtSetCurrentContext(*(ctx->dev_ctx)));
+    /*
     {
         //PERF_TIMER();
         ctx->rtmp->SendFrame((const uint8_t*)pdata);
     }
+    */
     {
         //PERF_TIMER();
         CHECK_ACL(ctx->resize->Resize((const uint8_t*)pdata, size));
@@ -46,7 +49,7 @@ int CameraCallBack(const void* pdata, int size, void* param) {
     
     const auto& input_buffers = ctx->model->GetInputBuffer();
     memcpy(input_buffers[0], resized_buffer, ctx->model->GetInputBufferSizes()[0]);
-    uint32_t* img_info = (uint32_t*)input_buffers[1];
+    float* img_info = (float*)input_buffers[1];
     img_info[0] = yolov3_model_size;
     img_info[1] = yolov3_model_size;
     img_info[2] = 720;// scale H
@@ -61,8 +64,41 @@ int CameraCallBack(const void* pdata, int size, void* param) {
     float* box_info = (float*)output_buffers[0];
     int32_t box_out_num = ((int32_t*)output_buffers[1])[0];
 
+    cv::Mat mYUV(720*1.5, 1280, CV_8UC1, (void*) pdata);
+    cv::Mat mRGB(720, 1280, CV_8UC3);
+    cv::Mat mYUV420P(720*1.5, 1280, CV_8UC1);
+    {
+        PERF_TIMER();
+        cv::cvtColor(mYUV, mRGB, CV_YUV2RGB_NV12, 3);
+    }
+    
+    
     std::cout << "result box num:" << box_out_num << std::endl;
     
+    for (int i = 0;i < box_out_num; ++i) {
+        float x1 = box_info[box_out_num * 0 + i];
+        float y1 = box_info[box_out_num * 1 + i];
+        float x2 = box_info[box_out_num * 2 + i];
+        float y2 = box_info[box_out_num * 3 + i];
+        float score = box_info[box_out_num * 4 + i];
+        float label = box_info[box_out_num * 5 + i];
+        std::cout << "box info: x1: " << x1
+          << " y2: " << y1
+          << " x2: " << x2
+          << " y2: " << y2
+          << " score: " << score
+          << " label: " << yolov3_label[int(label)] << std::endl;
+          //<< " label: " << label << std::endl;
+        cv::rectangle(mRGB, {x1, y1}, {x2, y2}, cv::Scalar(237, 149, 100));
+    }
+
+    {
+        PERF_TIMER();
+        cv::cvtColor(mRGB, mYUV420P, CV_RGB2YUV_I420, 1);
+    }
+
+    ctx->rtmp->SendFrame((const uint8_t*)(mYUV420P.ptr()));
+
     return 1;
 }
 
@@ -123,7 +159,7 @@ int main(int argc, char** argv) {
     }
 
     RtmpContext rtmp_ctx;
-    ret = rtmp_ctx.Init("mystream", 720, 1280);
+    ret = rtmp_ctx.Init("mystream", 720, 1280, AV_PIX_FMT_YUV420P);
 
     if (ret != 0) {
         std::cerr << "InitRtmp Ctx failed ret: " << ret << std::endl;

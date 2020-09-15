@@ -62,6 +62,7 @@ target_link_libraries(acl_cam_yolov3_pp
         /usr/lib64/libc_sec.so
         /usr/lib64/libmedia_mini.so
         opencv_core
+        opencv_imgproc
         avformat
         avutil
         avcodec)
