@@ -71,4 +71,12 @@ const static std::vector<std::string> yolov3_label = {"background", "person", "b
 		"refrigerator", "book", "clock", "vase","scissors", 
 		"teddy bear", "hair drier", "toothbrush"};
 
+static int align_up(int size, int align) {
+    return (size + (align - 1)) / align * align;
+}
+
+static int yuv420sp_size(int h, int w) {
+    return (h * w * 3) / 2;
+}
+
 #endif//__ACL_UTIL_H__

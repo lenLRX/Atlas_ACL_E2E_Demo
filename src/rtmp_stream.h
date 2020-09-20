@@ -18,6 +18,7 @@ public:
     bool IsValid();
 
     void SendFrame(const uint8_t* pdata);
+    void SendEncodedFrame(void* pdata, int size);
 
 private:
     AVFormatContext* encoder_avfc;

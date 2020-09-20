@@ -4,6 +4,7 @@ extern "C" {
 
 #include <unistd.h>
 #include <iostream>
+#include "opencv2/opencv.hpp"
 
 #include "acl/acl.h"
 
@@ -12,7 +13,9 @@ extern "C" {
 #include "acl_model.h"
 #include "util.h"
 #include "yolov3_post.h"
-#include "opencv2/opencv.hpp"
+#include "acl_cb_thread.h"
+#include "dvpp_encoder.h"
+
 
 const static int yolov3_model_size = 416;
 
@@ -23,6 +26,7 @@ public:
     RtmpContext* resize_rtmp;
     ACLModel* model;
     aclrtContext* dev_ctx;
+    DvppEncoder* encoder_ctx;
 };
 
 
@@ -30,12 +34,12 @@ int CameraCallBack(const void* pdata, int size, void* param) {
     //std::cerr << "CameraCallBack size: " << size << std::endl;
     CameraCtx* ctx = (CameraCtx*)param;
     CHECK_ACL(aclrtSetCurrentContext(*(ctx->dev_ctx)));
-    /*
+    
     {
         //PERF_TIMER();
-        ctx->rtmp->SendFrame((const uint8_t*)pdata);
+        //ctx->rtmp->SendFrame((const uint8_t*)pdata);
     }
-    */
+    
     {
         //PERF_TIMER();
         CHECK_ACL(ctx->resize->Resize((const uint8_t*)pdata, size));
@@ -89,7 +93,7 @@ int CameraCallBack(const void* pdata, int size, void* param) {
           << " score: " << score
           << " label: " << yolov3_label[int(label) + 1] << std::endl;
           //<< " label: " << label << std::endl;
-        cv::rectangle(mRGB, {x1, y1}, {x2, y2}, cv::Scalar(237, 149, 100));
+        cv::rectangle(mRGB, {(int)x1, (int)y1}, {(int)x2, (int)y2}, cv::Scalar(237, 149, 100));
     }
 
     {
@@ -97,13 +101,15 @@ int CameraCallBack(const void* pdata, int size, void* param) {
         cv::cvtColor(mRGB, mYUV420P, CV_RGB2YUV_I420, 1);
     }
 
-    ctx->rtmp->SendFrame((const uint8_t*)(mYUV420P.ptr()));
+    //ctx->rtmp->SendFrame((const uint8_t*)(mYUV420P.ptr()));
+    ctx->encoder_ctx->SendFrame((uint8_t*)(pdata), size);
 
     return 1;
 }
 
 int main(int argc, char** argv) {
     CHECK_ACL(aclInit(nullptr));
+
     int ret;
     ret = MediaLibInit();
     if (ret != LIBMEDIA_STATUS_OK) {
@@ -178,12 +184,19 @@ int main(int argc, char** argv) {
     CHECK_ACL(aclrtGetRunMode(&mode));
     std::cerr << "run mode:" << std::string(mode==ACL_DEVICE?"device":"host") << std::endl;
 
+    AclCallBackThread cb_thread;
+
+    CHECK_ACL(aclrtSubscribeReport(cb_thread.GetPid(), stream));
+
     VPCResizeEngine resize_engine(stream);
 
     resize_engine.Init(720, 1280, yolov3_model_size, yolov3_model_size);
 
     RtmpContext resized_ctx;
     ret = resized_ctx.Init("resize", yolov3_model_size, yolov3_model_size);
+
+    DvppEncoder encoder;
+    encoder.Init(cb_thread.GetPid(), 720, 1280, &rtmp_ctx);
 
     ACLModel model(stream);
     model.Init("./model/sample-yolov3_pp_416.om");
@@ -197,6 +210,7 @@ int main(int argc, char** argv) {
     camera_ctx.resize_rtmp = &resized_ctx;
     camera_ctx.dev_ctx = &ctx;
     camera_ctx.model = &model;
+    camera_ctx.encoder_ctx = &encoder;
 
     
     ret = CapCamera(0, CameraCallBack, &camera_ctx);

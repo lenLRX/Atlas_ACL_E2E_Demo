@@ -66,3 +66,49 @@ target_link_libraries(acl_cam_yolov3_pp
         avformat
         avutil
         avcodec)
+
+add_executable(acl_video_yolov3_pp
+        src/main_yolov3_video.cpp
+        src/acl_model.cpp
+        src/rtmp_stream.cpp
+        src/vpc_resize.cpp
+        src/yolov3_post.cpp)
+
+target_link_libraries(acl_video_yolov3_pp
+        ascendcl
+        acl_dvpp
+        runtime
+        /usr/lib64/libslog.so
+        /usr/lib64/libc_sec.so
+        /usr/lib64/libmedia_mini.so
+        opencv_core
+        opencv_imgproc
+        opencv_videoio
+        avformat
+        avutil
+        avcodec)
+
+add_executable(acl_hw_enc
+        src/main_hw_encode.cpp
+        src/acl_model.cpp
+        src/rtmp_stream.cpp
+        src/vpc_resize.cpp
+        src/dvpp_encoder.cpp
+        src/yolov3_post.cpp)
+
+target_link_libraries(acl_hw_enc
+        ascendcl
+        acl_dvpp
+        runtime
+        /usr/lib64/libslog.so
+        /usr/lib64/libc_sec.so
+        /usr/lib64/libmedia_mini.so
+        pthread
+        opencv_core
+        opencv_imgproc
+        opencv_videoio
+        avformat
+        avutil
+        avcodec)
+
+

@@ -2,13 +2,6 @@
 #include "util.h"
 #include <string.h>
 
-int align_up(int size, int align) {
-    return (size + (align - 1)) / align * align;
-}
-
-int yuv420sp_size(int h, int w) {
-    return (h * w * 3) / 2;
-}
 
 VPCResizeEngine::VPCResizeEngine(aclrtStream stream):stream(stream) {
     channel_desc  = acldvppCreateChannelDesc();

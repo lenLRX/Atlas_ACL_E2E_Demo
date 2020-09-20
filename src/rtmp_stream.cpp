@@ -12,7 +12,7 @@ int RtmpContext::Init(std::string name, int img_h, int img_w, int pic_fmt) {
   
   av_register_all();
   avformat_network_init();
-  //av_log_set_level(AV_LOG_DEBUG);
+  //av_log_set_level(AV_LOG_TRACE);
   int ret=0;
 
   encoder_avfc = NULL;
@@ -141,5 +141,40 @@ void RtmpContext::SendFrame(const uint8_t* pdata) {
     av_packet_unref(&pkt);
 
   video_frame->pts += av_rescale_q(1, video_avcc->time_base, avs->time_base);
+}
+
+static void dontfree(void *opaque, uint8_t *data) {
+  // tell ffmpeg dont free data
+}
+
+void RtmpContext::SendEncodedFrame(void* pdata, int size) {
+  int ret = 0;
+    AVPacket pkt = {0};
+    av_init_packet(&pkt);
+
+    pkt.pts = video_frame->pts;
+    pkt.dts = pkt.pts;
+    pkt.flags = AV_PKT_FLAG_KEY;
+    //av_packet_from_data(&pkt, (uint8_t*)pdata, size);
+
+    pkt.buf = av_buffer_create((uint8_t*)pdata, size + AV_INPUT_BUFFER_PADDING_SIZE,
+                                dontfree, NULL, 0);
+  
+    pkt.data = (uint8_t*)pdata;
+    pkt.size = size;
+
+    ret = av_write_frame(encoder_avfc, &pkt);
+    
+    if (ret < 0) {
+      std::cerr << "[RtmpContext::SendFrame] av_interleaved_write_frame failed" << std::endl;
+      return;
+    }
+
+    //pkt.buf = nullptr;
+
+    av_packet_unref(&pkt);
+
+    video_frame->pts += av_rescale_q(1, video_avcc->time_base, avs->time_base);
+  std::cerr << "[RtmpContext::SendFrame] Sent Done" << std::endl;
 }
 

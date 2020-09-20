@@ -3,9 +3,8 @@
 #include "acl/acl.h"
 #include "acl/ops/acl_dvpp.h"
 
-int align_up(int size, int align);
+#include "util.h"
 
-int yuv420sp_size(int h, int w);
 
 class VPCResizeEngine {
 public:
