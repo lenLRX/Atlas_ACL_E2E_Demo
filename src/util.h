@@ -2,6 +2,7 @@
 #define __ACL_UTIL_H__
 
 #include "acl/acl.h"
+#include "acl/ops/acl_dvpp.h"
 #include <iostream>
 #include <sstream>
 #include <chrono>
@@ -77,6 +78,17 @@ static int align_up(int size, int align) {
 
 static int yuv420sp_size(int h, int w) {
     return (h * w * 3) / 2;
+}
+
+static acldvppStreamFormat h264_ffmpeg_profile_to_acl_stream_fromat(int profile) {
+    switch (profile) {
+        case 77:// h264 main level
+            return H264_MAIN_LEVEL;
+        case 66:// h264 baseline level
+            return H264_BASELINE_LEVEL;
+        case 100:// h264 high level
+            return H264_HIGH_LEVEL;
+    }
 }
 
 #endif//__ACL_UTIL_H__

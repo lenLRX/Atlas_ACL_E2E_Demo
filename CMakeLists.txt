@@ -112,3 +112,22 @@ target_link_libraries(acl_hw_enc
         avcodec)
 
 
+add_executable(rtsp_test
+        src/main_rtsp_client_test.cpp
+        src/dvpp_decoder.cpp
+        src/rtsp_input.cpp)
+
+target_link_libraries(rtsp_test
+        ascendcl
+        acl_dvpp
+        runtime
+        /usr/lib64/libslog.so
+        /usr/lib64/libc_sec.so
+        /usr/lib64/libmedia_mini.so
+        pthread
+        opencv_core
+        opencv_imgproc
+        opencv_videoio
+        avformat
+        avutil
+        avcodec)
