@@ -1,10 +1,24 @@
 #include "dvpp_decoder.h"
 
+class DecoderContext {
+public:
+    DecoderContext(DvppDecoder* decoder, AVPacket* pkt):
+        decoder(decoder), pkt(pkt) {}
+    DvppDecoder* decoder;
+    AVPacket* pkt;
+};
+
 static void DvppDecCallback(acldvppStreamDesc* input, acldvppPicDesc* output, void* user_data) {
+    DecoderContext* ctx = (DecoderContext*)user_data;
     std::cout << "DvppDecCallback Enter" << std::endl;
-    delete[] acldvppGetPicDescData(output);
-    av_packet_unref((AVPacket*)user_data);
-    delete user_data;
+    aclrtSetCurrentContext(*ctx->decoder->GetDeviceCtx());
+    uint8_t* output_buffer = (uint8_t*)acldvppGetPicDescData(output);
+    ctx->decoder->GetHandler()(output_buffer);
+    std::cout << "DvppDecCallback Enter1" << std::endl;
+    delete[] output_buffer;
+    av_packet_unref((AVPacket*)ctx->pkt);
+    delete ctx->pkt;
+    delete ctx;
     acldvppDestroyPicDesc(output);
     acldvppDestroyStreamDesc(input);
 }
@@ -12,6 +26,10 @@ static void DvppDecCallback(acldvppStreamDesc* input, acldvppPicDesc* output, vo
 aclError DvppDecoder::Init(const pthread_t thread_id, int h, int w) {
     height = h;
     width = w;
+    // YUV420SP
+    output_size = (width * height * 3) / 2;
+    std::cout << "[DvppDecoder::Init] h: " << h
+        << " w:" << w << "output_size: " << output_size << std::endl;
     channel_desc = aclvdecCreateChannelDesc();
     CHECK_ACL(aclvdecSetChannelDescChannelId(channel_desc, 0));
     CHECK_ACL(aclvdecSetChannelDescThreadId(channel_desc, thread_id));
@@ -30,7 +48,6 @@ aclError DvppDecoder::SendFrame(AVPacket* packet) {
     std::cout << "DvppDecoder::SendFrame Enter" << std::endl;
     AVPacket* frame_packet = new AVPacket();
     av_packet_ref(frame_packet, packet);
-    std::cout << "av_packet_ref done" << std::endl;
 
     acldvppStreamDesc* stream_desc = acldvppCreateStreamDesc();
     CHECK_ACL(acldvppSetStreamDescData(stream_desc, frame_packet->data));
@@ -38,17 +55,43 @@ aclError DvppDecoder::SendFrame(AVPacket* packet) {
     
     acldvppPicDesc* output = acldvppCreatePicDesc();
 
-    size_t output_size = (width * height * 3) / 2;
-
     uint8_t* output_buffer = new uint8_t[output_size];
 
     acldvppSetPicDescData(output, output_buffer);
     acldvppSetPicDescSize(output, output_size);
     acldvppSetPicDescFormat(output, PIXEL_FORMAT_YUV_SEMIPLANAR_420);
 
-    CHECK_ACL(aclvdecSendFrame(channel_desc, stream_desc, output, nullptr, frame_packet));
+    DecoderContext* ctx = new DecoderContext(this, frame_packet);
+    CHECK_ACL(aclvdecSendFrame(channel_desc, stream_desc, output, nullptr, ctx));
 
     std::cout << "DvppDecoder::SendFrame Exit" << std::endl;
     return ACL_ERROR_NONE;
 }
 
+void DvppDecoder::RegisterHandler(std::function<void(uint8_t*)> handler) {
+    buffer_handler = handler;
+}
+
+const std::function<void(uint8_t*)>& DvppDecoder::GetHandler() {
+    return buffer_handler;
+}
+
+void DvppDecoder::SetDeviceCtx(aclrtContext* ctx) {
+    dev_ctx = ctx;
+}
+
+aclrtContext* DvppDecoder::GetDeviceCtx() {
+    return dev_ctx;
+}
+
+int DvppDecoder::GetHeight() {
+    return height;
+}
+
+int DvppDecoder::GetWidth() {
+    return width;
+}
+
+int DvppDecoder::GetOutputBufferSize() {
+    return output_size;
+}

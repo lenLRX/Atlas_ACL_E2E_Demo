@@ -48,30 +48,48 @@ int RTSPInput::Init(const std::string& addr) {
     std::cout << "avcc profile: " << av_cc->profile << std::endl;
     std::cout << "ref frame num: " << av_cc->refs << std::endl;
     std::cout << "has B frame: " << av_cc->has_b_frames << std::endl;
-
-    CHECK_ACL(aclrtSetDevice(0));
-
-    aclrtContext ctx;
-    CHECK_ACL(aclrtCreateContext(&ctx, 0));
-    CHECK_ACL(aclrtSetCurrentContext(ctx));
-    aclrtStream stream;
-    CHECK_ACL(aclrtCreateStream(&stream));
-    CHECK_ACL(aclrtSubscribeReport(cb_thread.GetPid(), stream));
-
-    decoder.Init(cb_thread.GetPid(),av_cc->height, av_cc->width);
     
-
     return 0;
 }
 
+void RTSPInput::RegisterHandler(std::function<void(AVPacket*)> handler) {
+    packet_handler = handler;
+}
 
-void RTSPInput::Pull() {
+int RTSPInput::GetHeight() {
+    if (av_cc == nullptr) {
+        throw std::runtime_error("RTSP Stream is not Inited!");
+    }
+    return av_cc->height;
+}
+
+int RTSPInput::GetWidth() {
+    if (av_cc == nullptr) {
+        throw std::runtime_error("RTSP Stream is not Inited!");
+    }
+    return av_cc->width;
+}
+
+
+void RTSPInput::Run() {
+    while (ReceiveSinglePacket());
+}
+
+bool RTSPInput::ReceiveSinglePacket() {
     AVPacket packet;
     av_init_packet(&packet);
-    av_read_frame(av_fc, &packet);
-    std::cout << "packet stream: " << packet.stream_index << " video stream: " << video_stream << std::endl;
+    int ret = av_read_frame(av_fc, &packet);
+    //std::cout << "ret: " << ret << "packet stream: " 
+    //    << packet.stream_index << " video stream: " << video_stream << std::endl;
+    if (ret < 0) {
+        char err_buf[AV_ERROR_MAX_STRING_SIZE] = {0};
+        std::cerr << "[RTSPInput::ReceiveSinglePacket] err string: " << av_make_error_string(err_buf, AV_ERROR_MAX_STRING_SIZE, ret) << std::endl;
+        av_packet_unref(&packet);
+        return false;
+    }
     if (packet.stream_index == video_stream) {
-        decoder.SendFrame(&packet);
+        packet_handler(&packet);
     }
     av_packet_unref(&packet);
+    return true;
 }

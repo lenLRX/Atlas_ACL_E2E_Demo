@@ -9,20 +9,21 @@ extern "C" {
 
 #include <string>
 #include <iostream>
-
-#include "dvpp_decoder.h"
-#include "acl_cb_thread.h"
+#include <functional>
 
 class RTSPInput {
 public:
     RTSPInput() = default;
     int Init(const std::string& addr);
-    void Pull();
+    void RegisterHandler(std::function<void(AVPacket*)> handler);
+    int GetHeight();
+    int GetWidth();
+    void Run();
 private:
-    AclCallBackThread cb_thread;
-    DvppDecoder decoder;
-    AVFormatContext* av_fc;
-    AVCodecContext* av_cc;
+    bool ReceiveSinglePacket();
+    AVFormatContext* av_fc{nullptr};
+    AVCodecContext* av_cc{nullptr};
+    std::function<void(AVPacket*)> packet_handler;
 
     int video_stream{-1};
 };

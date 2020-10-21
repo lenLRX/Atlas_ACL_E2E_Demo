@@ -7,7 +7,7 @@ cmake_minimum_required(VERSION 3.5.1)
 project(acl_cam)
 
 # Compile options
-add_compile_options(-std=c++11 -g -O0)
+add_compile_options(-std=c++17 -g -O0)
 
 add_definitions(-DENABLE_DVPP_INTERFACE)
 
@@ -115,7 +115,11 @@ target_link_libraries(acl_hw_enc
 add_executable(rtsp_test
         src/main_rtsp_client_test.cpp
         src/dvpp_decoder.cpp
-        src/rtsp_input.cpp)
+        src/rtsp_input.cpp
+        src/acl_model.cpp
+        src/rtmp_stream.cpp
+        src/vpc_resize.cpp
+        src/dvpp_encoder.cpp)
 
 target_link_libraries(rtsp_test
         ascendcl

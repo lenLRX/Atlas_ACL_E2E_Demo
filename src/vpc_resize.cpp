@@ -13,7 +13,7 @@ VPCResizeEngine::VPCResizeEngine(aclrtStream stream):stream(stream) {
 
 aclError VPCResizeEngine::Init(int src_h, int src_w, int dst_h, int dst_w) {
     CHECK_ACL(acldvppCreateChannel(channel_desc));
-    input_buffer_size = yuv420sp_size(align_up(src_h, 16), align_up(src_w, 128));
+    input_buffer_size = yuv420sp_size(align_up(src_h, 2), align_up(src_w, 16));
     CHECK_ACL(acldvppMalloc(&dvpp_input_mem, input_buffer_size));
     output_buffer_size = yuv420sp_size(dst_h, dst_w);
     CHECK_ACL(acldvppMalloc(&dvpp_output_mem, output_buffer_size));
@@ -24,8 +24,8 @@ aclError VPCResizeEngine::Init(int src_h, int src_w, int dst_h, int dst_w) {
     CHECK_ACL(acldvppSetPicDescFormat(input_desc, PIXEL_FORMAT_YUV_SEMIPLANAR_420));
     CHECK_ACL(acldvppSetPicDescWidth(input_desc, src_w));
     CHECK_ACL(acldvppSetPicDescHeight(input_desc, src_h));
-    CHECK_ACL(acldvppSetPicDescWidthStride(input_desc, align_up(src_w, 128)));
-    CHECK_ACL(acldvppSetPicDescHeightStride(input_desc, align_up(src_h, 16)));
+    CHECK_ACL(acldvppSetPicDescWidthStride(input_desc, align_up(src_w, 16)));
+    CHECK_ACL(acldvppSetPicDescHeightStride(input_desc, align_up(src_h, 2)));
     CHECK_ACL(acldvppSetPicDescSize(input_desc, input_buffer_size));
 
     CHECK_ACL(acldvppSetPicDescData(output_desc, dvpp_output_mem));
@@ -38,15 +38,25 @@ aclError VPCResizeEngine::Init(int src_h, int src_w, int dst_h, int dst_w) {
 
 }
 
-aclError VPCResizeEngine::Resize(const uint8_t* pdata, int size) {
-    //std::cerr << "input_buffer_size: " << input_buffer_size << std::endl;
+aclError VPCResizeEngine::Resize(const uint8_t* pdata) {
     memcpy(dvpp_input_mem, pdata, input_buffer_size);
     CHECK_ACL(acldvppVpcResizeAsync(channel_desc, input_desc,
         output_desc, resize_config, stream));
     CHECK_ACL(aclrtSynchronizeStream(stream));
+    if (buffer_handler) {
+        buffer_handler(GetOutputBuffer());
+    }
     return ACL_ERROR_NONE;
 }
 
 uint8_t* VPCResizeEngine::GetOutputBuffer() {
     return (uint8_t*)dvpp_output_mem;
+}
+
+int VPCResizeEngine::GetOutputBufferSize() {
+    return output_buffer_size;
+}
+
+void VPCResizeEngine::RegisterHandler(std::function<void(uint8_t*)> handler) {
+    buffer_handler = handler;
 }
