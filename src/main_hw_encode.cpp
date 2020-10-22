@@ -102,7 +102,7 @@ int CameraCallBack(const void* pdata, int size, void* param) {
     }
 
     //ctx->rtmp->SendFrame((const uint8_t*)(mYUV420P.ptr()));
-    ctx->encoder_ctx->SendFrame((uint8_t*)(pdata), size);
+    ctx->encoder_ctx->SendFrame((uint8_t*)(pdata));
 
     return 1;
 }

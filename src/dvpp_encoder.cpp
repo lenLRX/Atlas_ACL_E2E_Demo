@@ -21,9 +21,21 @@ DvppEncoder::DvppEncoder() {
     frame_config = aclvencCreateFrameConfig();
 }
 
+DvppEncoder::~DvppEncoder() {
+}
+
+void DvppEncoder::Destory() {
+    aclvencDestroyChannel(channel_desc);
+    aclvencDestroyChannelDesc(channel_desc);
+    aclvencDestroyFrameConfig(frame_config);
+    std::cout << "DvppEncoder::~DvppEncoder End" << std::endl;
+}
+
 aclError DvppEncoder::Init(const pthread_t thread_id, int h, int w, RtmpContext* ctx) {
     height = h;
     width = w;
+    size = (width * height * 3) / 2;
+    std::cout << "[DvppEncoder::Init] height:" << height << " width: " << width << " size: " << size << std::endl;
     rtmp_ctx = ctx;
     CHECK_ACL(aclvencSetChannelDescThreadId(channel_desc, thread_id));
     CHECK_ACL(aclvencSetChannelDescCallback(channel_desc, &EncoderCallback));
@@ -41,7 +53,7 @@ aclError DvppEncoder::Init(const pthread_t thread_id, int h, int w, RtmpContext*
     return ACL_ERROR_NONE;
 }
 
-aclError DvppEncoder::SendFrame(uint8_t* data, uint32_t size) {
+aclError DvppEncoder::SendFrame(uint8_t* data) {
     acldvppPicDesc* pic_desc = acldvppCreatePicDesc();
     CHECK_ACL(acldvppSetPicDescData(pic_desc, data));
     CHECK_ACL(acldvppSetPicDescSize(pic_desc, size));

@@ -10,11 +10,11 @@ public:
 
 static void DvppDecCallback(acldvppStreamDesc* input, acldvppPicDesc* output, void* user_data) {
     DecoderContext* ctx = (DecoderContext*)user_data;
-    std::cout << "DvppDecCallback Enter" << std::endl;
     aclrtSetCurrentContext(*ctx->decoder->GetDeviceCtx());
     uint8_t* output_buffer = (uint8_t*)acldvppGetPicDescData(output);
+    std::cout << "DvppDecCallback Enter" << std::endl;
     ctx->decoder->GetHandler()(output_buffer);
-    std::cout << "DvppDecCallback Enter1" << std::endl;
+    std::cout << "DvppDecCallback Exit" << std::endl;
     delete[] output_buffer;
     av_packet_unref((AVPacket*)ctx->pkt);
     delete ctx->pkt;
@@ -41,11 +41,25 @@ aclError DvppDecoder::Init(const pthread_t thread_id, int h, int w) {
     CHECK_ACL(aclvdecSetChannelDescRefFrameNum(channel_desc, 1));
     CHECK_ACL(aclvdecSetChannelDescOutMode(channel_desc, 0));
     aclvdecCreateChannel(channel_desc);
+}
+
+DvppDecoder::~DvppDecoder() {
     
 }
 
+
+void DvppDecoder::Destory() {
+    std::cout << "DvppDecoder::~DvppDecoder Start" << std::endl;
+
+    aclvdecDestroyChannel(channel_desc);
+    std::cout << "DvppDecoder::~DvppDecoder DestroyChannel Done" << std::endl;
+    //aclvdecDestroyChannelDesc(channel_desc);
+    //aclvdecDestroyFrameConfig(frame_config);
+    std::cout << "DvppDecoder::~DvppDecoder End" << std::endl;
+}
+
 aclError DvppDecoder::SendFrame(AVPacket* packet) {
-    std::cout << "DvppDecoder::SendFrame Enter" << std::endl;
+    //std::cout << "DvppDecoder::SendFrame Enter" << std::endl;
     AVPacket* frame_packet = new AVPacket();
     av_packet_ref(frame_packet, packet);
 
@@ -64,7 +78,7 @@ aclError DvppDecoder::SendFrame(AVPacket* packet) {
     DecoderContext* ctx = new DecoderContext(this, frame_packet);
     CHECK_ACL(aclvdecSendFrame(channel_desc, stream_desc, output, nullptr, ctx));
 
-    std::cout << "DvppDecoder::SendFrame Exit" << std::endl;
+    //std::cout << "DvppDecoder::SendFrame Exit" << std::endl;
     return ACL_ERROR_NONE;
 }
 

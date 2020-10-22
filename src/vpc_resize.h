@@ -11,7 +11,8 @@
 class VPCResizeEngine {
 public:
     VPCResizeEngine(aclrtStream stream);
-    //~VPCResizeEngine();
+    ~VPCResizeEngine();
+    void Destory();
 
     aclError Init(int src_h, int src_w, int dst_h, int dst_w);
 

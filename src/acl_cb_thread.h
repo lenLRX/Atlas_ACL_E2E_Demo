@@ -27,9 +27,18 @@ public:
         return worker_thread.native_handle();
     }
 
-    ~AclCallBackThread(){
+    void Join() {
         run_flag = false;
         worker_thread.join();
+    }
+
+    ~AclCallBackThread(){
+        /*
+        if (run_flag) {
+            run_flag = false;
+            worker_thread.join();
+        }
+        */
     }
 private:
     bool run_flag{true};

@@ -3,7 +3,7 @@
 int RTSPInput::Init(const std::string& addr) {
     av_register_all();
     avformat_network_init();
-    av_log_set_level(AV_LOG_TRACE);
+    //av_log_set_level(AV_LOG_TRACE);
 
     av_fc = avformat_alloc_context();
 

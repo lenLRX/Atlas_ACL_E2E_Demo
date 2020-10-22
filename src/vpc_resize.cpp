@@ -38,6 +38,15 @@ aclError VPCResizeEngine::Init(int src_h, int src_w, int dst_h, int dst_w) {
 
 }
 
+VPCResizeEngine::~VPCResizeEngine() {
+}
+
+void VPCResizeEngine::Destory() {
+    acldvppDestroyChannel(channel_desc);
+    std::cout << "VPCResizeEngine::~VPCResizeEngine End" << std::endl;
+    // TODO: other clean up
+}
+
 aclError VPCResizeEngine::Resize(const uint8_t* pdata) {
     memcpy(dvpp_input_mem, pdata, input_buffer_size);
     CHECK_ACL(acldvppVpcResizeAsync(channel_desc, input_desc,

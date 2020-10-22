@@ -17,6 +17,8 @@ extern "C" {
 class DvppDecoder {
 public:
     DvppDecoder() = default;
+    ~DvppDecoder();
+    void Destory();
     aclError Init(const pthread_t thread_id, int h, int w);
     aclError SendFrame(AVPacket* packet);
     void RegisterHandler(std::function<void(uint8_t*)> handler);
