@@ -11,6 +11,8 @@
 
 #include <thread>
 #include <chrono>
+#include <string>
+#include <iostream>
 
 using namespace std::chrono_literals;
 
@@ -57,8 +59,7 @@ void DetectAndDraw(ACLModel* model, uint8_t* buffer) {
     }
 }
 
-int main(int argc, char** argv) {
-    CHECK_ACL(aclInit(nullptr));
+void StreamThread(std::string input_addr, std::string output_addr) {
     CHECK_ACL(aclrtSetDevice(0));
     AclCallBackThread* cb_thread_p = new AclCallBackThread();
     AclCallBackThread& cb_thread = *cb_thread_p;
@@ -110,10 +111,50 @@ int main(int argc, char** argv) {
     resize_engine.Destory();
     encoder.Destory();
 
-    
-
     //CHECK_ACL(aclrtUnSubscribeReport(cb_thread.GetPid(), stream));
     //cb_thread.Join();
-    std::cout << "End of main thread" << std::endl;
+    std::cout << "End of stream" << std::endl;
+}
+
+int main(int argc, char** argv) {
+    CHECK_ACL(aclInit(nullptr));
+
+    std::string input_promot = "--input";
+    std::string output_promot = "--output";
+
+    std::vector<std::thread> streams;
+    if ((argc - 1) % 4 != 0) {
+        std::cerr << "Invalid cmd line option" << std::endl;
+        return -1;
+    }
+
+    int stream_num = (argc - 1) / 4;
+    int arg_i = 1;
+
+    for (int i = 0;i < stream_num; ++i) {
+        std::string i_promot(argv[arg_i]);
+        if (i_promot != input_promot) {
+            std::cerr << "invalid option: " << i_promot << std::endl;
+            return -1;
+        }
+        ++arg_i;
+
+        std::string input_addr(argv[arg_i]);
+
+        ++arg_i;
+        std::string o_promot(argv[arg_i]);
+        if (o_promot != output_promot) {
+            std::cerr << "invalid option: " << i_promot << std::endl;
+            return -1;
+        }
+
+        ++arg_i;
+
+        std::string output_addr(argv[arg_i]);
+        ++arg_i;
+
+        streams.emplace_back(StreamThread, input_addr, output_addr);
+    }
+    
     return 0;
 }

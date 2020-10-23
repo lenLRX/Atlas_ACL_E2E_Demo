@@ -27,14 +27,35 @@ link_directories(
 	/usr/local/Ascend/acllib/lib64/
 )
 
-add_executable(acl_cam
-        src/main.cpp
+add_library(acl_demo SHARED
+        src/dvpp_decoder.cpp
+        src/rtsp_input.cpp
         src/acl_model.cpp
         src/rtmp_stream.cpp
         src/vpc_resize.cpp
+        src/dvpp_encoder.cpp
         src/yolov3_post.cpp)
 
+target_link_libraries(acl_demo
+        ascendcl
+        acl_dvpp
+        runtime
+        /usr/lib64/libslog.so
+        /usr/lib64/libc_sec.so
+        /usr/lib64/libmedia_mini.so
+        pthread
+        opencv_core
+        opencv_imgproc
+        opencv_videoio
+        avformat
+        avutil
+        avcodec)
+
+add_executable(acl_cam
+        src/main.cpp)
+
 target_link_libraries(acl_cam
+        acl_demo
         ascendcl
         acl_dvpp
         runtime
@@ -48,13 +69,10 @@ target_link_libraries(acl_cam
 
 
 add_executable(acl_cam_yolov3_pp
-        src/main_yolov3_pp.cpp
-        src/acl_model.cpp
-        src/rtmp_stream.cpp
-        src/vpc_resize.cpp
-        src/yolov3_post.cpp)
+        src/main_yolov3_pp.cpp)
 
 target_link_libraries(acl_cam_yolov3_pp
+        acl_demo
         ascendcl
         acl_dvpp
         runtime
@@ -68,13 +86,10 @@ target_link_libraries(acl_cam_yolov3_pp
         avcodec)
 
 add_executable(acl_video_yolov3_pp
-        src/main_yolov3_video.cpp
-        src/acl_model.cpp
-        src/rtmp_stream.cpp
-        src/vpc_resize.cpp
-        src/yolov3_post.cpp)
+        src/main_yolov3_video.cpp)
 
 target_link_libraries(acl_video_yolov3_pp
+        acl_demo
         ascendcl
         acl_dvpp
         runtime
@@ -89,14 +104,10 @@ target_link_libraries(acl_video_yolov3_pp
         avcodec)
 
 add_executable(acl_hw_enc
-        src/main_hw_encode.cpp
-        src/acl_model.cpp
-        src/rtmp_stream.cpp
-        src/vpc_resize.cpp
-        src/dvpp_encoder.cpp
-        src/yolov3_post.cpp)
+        src/main_hw_encode.cpp)
 
 target_link_libraries(acl_hw_enc
+        acl_demo
         ascendcl
         acl_dvpp
         runtime
@@ -113,15 +124,10 @@ target_link_libraries(acl_hw_enc
 
 
 add_executable(rtsp_test
-        src/main_rtsp_client_test.cpp
-        src/dvpp_decoder.cpp
-        src/rtsp_input.cpp
-        src/acl_model.cpp
-        src/rtmp_stream.cpp
-        src/vpc_resize.cpp
-        src/dvpp_encoder.cpp)
+        src/main_rtsp_client_test.cpp)
 
 target_link_libraries(rtsp_test
+        acl_demo
         ascendcl
         acl_dvpp
         runtime
