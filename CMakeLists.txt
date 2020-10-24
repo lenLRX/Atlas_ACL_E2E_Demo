@@ -55,89 +55,36 @@ add_executable(acl_cam
         src/main.cpp)
 
 target_link_libraries(acl_cam
-        acl_demo
-        ascendcl
-        acl_dvpp
-        runtime
-        /usr/lib64/libslog.so
-        /usr/lib64/libc_sec.so
-        /usr/lib64/libmedia_mini.so
-        opencv_core
-        avformat
-        avutil
-        avcodec)
+        acl_demo)
 
 
 add_executable(acl_cam_yolov3_pp
         src/main_yolov3_pp.cpp)
 
 target_link_libraries(acl_cam_yolov3_pp
-        acl_demo
-        ascendcl
-        acl_dvpp
-        runtime
-        /usr/lib64/libslog.so
-        /usr/lib64/libc_sec.so
-        /usr/lib64/libmedia_mini.so
-        opencv_core
-        opencv_imgproc
-        avformat
-        avutil
-        avcodec)
+        acl_demo)
 
 add_executable(acl_video_yolov3_pp
         src/main_yolov3_video.cpp)
 
 target_link_libraries(acl_video_yolov3_pp
-        acl_demo
-        ascendcl
-        acl_dvpp
-        runtime
-        /usr/lib64/libslog.so
-        /usr/lib64/libc_sec.so
-        /usr/lib64/libmedia_mini.so
-        opencv_core
-        opencv_imgproc
-        opencv_videoio
-        avformat
-        avutil
-        avcodec)
+        acl_demo)
 
 add_executable(acl_hw_enc
         src/main_hw_encode.cpp)
 
 target_link_libraries(acl_hw_enc
-        acl_demo
-        ascendcl
-        acl_dvpp
-        runtime
-        /usr/lib64/libslog.so
-        /usr/lib64/libc_sec.so
-        /usr/lib64/libmedia_mini.so
-        pthread
-        opencv_core
-        opencv_imgproc
-        opencv_videoio
-        avformat
-        avutil
-        avcodec)
+        acl_demo)
 
 
 add_executable(rtsp_test
         src/main_rtsp_client_test.cpp)
 
 target_link_libraries(rtsp_test
-        acl_demo
-        ascendcl
-        acl_dvpp
-        runtime
-        /usr/lib64/libslog.so
-        /usr/lib64/libc_sec.so
-        /usr/lib64/libmedia_mini.so
-        pthread
-        opencv_core
-        opencv_imgproc
-        opencv_videoio
-        avformat
-        avutil
-        avcodec)
+        acl_demo)
+
+add_executable(acl_multi_stream_demo
+        src/multi_stream_demo.cpp)
+
+target_link_libraries(acl_multi_stream_demo
+        acl_demo)

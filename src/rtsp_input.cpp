@@ -1,4 +1,5 @@
 #include "rtsp_input.h"
+#include "util.h"
 
 int RTSPInput::Init(const std::string& addr) {
     av_register_all();
@@ -46,6 +47,9 @@ int RTSPInput::Init(const std::string& addr) {
 
     std::cout << "[RTSPInput::Init] " << addr << " codec name:" << avcodec_get_name(av_cc->codec_id) << std::endl;
     std::cout << "avcc profile: " << av_cc->profile << std::endl;
+    std::cout << "ticks_per_frame: " << av_cc->ticks_per_frame << std::endl;
+    std::cout << "framerate.num: " << av_cc->framerate.num << std::endl;
+    std::cout << "framerate.den: " << av_cc->framerate.den << std::endl;
     std::cout << "ref frame num: " << av_cc->refs << std::endl;
     std::cout << "has B frame: " << av_cc->has_b_frames << std::endl;
     
@@ -70,6 +74,19 @@ int RTSPInput::GetWidth() {
     return av_cc->width;
 }
 
+acldvppStreamFormat RTSPInput::GetProfile() {
+    if (av_cc == nullptr) {
+        throw std::runtime_error("RTSP Stream is not Inited!");
+    }
+    return h264_ffmpeg_profile_to_acl_stream_fromat(av_cc->profile);
+}
+
+AVRational RTSPInput::GetFramerate() {
+    if (av_cc == nullptr) {
+        throw std::runtime_error("RTSP Stream is not Inited!");
+    }
+    return av_cc->framerate;
+}
 
 void RTSPInput::Run() {
     while (ReceiveSinglePacket());

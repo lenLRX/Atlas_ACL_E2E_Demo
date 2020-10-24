@@ -14,7 +14,8 @@ class RtmpContext {
 public:
     RtmpContext() = default;
 
-    int Init(std::string name, int img_h, int img_w, int pic_fmt=AV_PIX_FMT_NV12);
+    int Init(std::string name, int img_h, int img_w, int frame_rate=20, int pic_fmt=AV_PIX_FMT_NV12);
+    int Init(std::string name, int img_h, int img_w, AVRational frame_rate, int pic_fmt=AV_PIX_FMT_NV12);
     bool IsValid();
 
     void SendFrame(const uint8_t* pdata);

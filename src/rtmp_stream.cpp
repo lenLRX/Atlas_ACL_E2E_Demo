@@ -1,12 +1,17 @@
 #include "rtmp_stream.h"
-
+#include "util.h"
 #include <iostream>
 
+int RtmpContext::Init(std::string name, int img_h, int img_w, int frame_rate, int pic_fmt) {
+  AVRational av_framerate;
+  av_framerate.num = frame_rate;
+  av_framerate.den = 1;
+  return Init(name, img_h, img_w, av_framerate, pic_fmt);
+}
 
-int RtmpContext::Init(std::string name, int img_h, int img_w, int pic_fmt) {
-  std::string base_addr = "rtmp://127.0.0.1:1935/myapp/";
-  stream_name = base_addr + name;
-  const char* codec_name = "libx265";
+int RtmpContext::Init(std::string name, int img_h, int img_w, AVRational frame_rate, int pic_fmt) {
+  //std::string base_addr = "rtmp://127.0.0.1:1935/myapp/";
+  stream_name = name;
   const char* output = stream_name.c_str();
   const char* profile = "high444";
   
@@ -53,9 +58,9 @@ int RtmpContext::Init(std::string name, int img_h, int img_w, int pic_fmt) {
   video_avcc->rc_buffer_size = 4 * 1000 * 1000;
   video_avcc->rc_max_rate = 2 * 1000 * 1000;
   video_avcc->rc_min_rate = 2.5 * 1000 * 1000;
-  video_avcc->time_base.num = 1;
-  video_avcc->time_base.den = 20;
-  video_avcc->gop_size = 0;
+  video_avcc->time_base.num = frame_rate.den;
+  video_avcc->time_base.den = frame_rate.num;
+  //video_avcc->gop_size = 0;
 
   if (encoder_avfc->oformat->flags & AVFMT_GLOBALHEADER) {
     video_avcc->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
@@ -110,6 +115,7 @@ bool RtmpContext::IsValid() {
 }
 
 void RtmpContext::SendFrame(const uint8_t* pdata) {
+  PERF_TIMER();
   int ret = 0;
   av_image_fill_arrays(video_frame->data, video_frame->linesize,
     pdata,video_avcc->pix_fmt, video_avcc->width, video_avcc->height, 1);

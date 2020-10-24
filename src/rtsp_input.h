@@ -7,6 +7,9 @@ extern "C" {
 #include "libavutil/imgutils.h"
 }
 
+#include "acl/acl.h"
+#include "acl/ops/acl_dvpp.h"
+
 #include <string>
 #include <iostream>
 #include <functional>
@@ -18,6 +21,8 @@ public:
     void RegisterHandler(std::function<void(AVPacket*)> handler);
     int GetHeight();
     int GetWidth();
+    acldvppStreamFormat GetProfile();
+    AVRational GetFramerate();
     void Run();
 private:
     bool ReceiveSinglePacket();

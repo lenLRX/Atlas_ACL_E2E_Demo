@@ -38,6 +38,7 @@ void DetectAndDraw(ACLModel* model, uint8_t* buffer) {
     int32_t box_out_num = ((int32_t*)output_buffers[1])[0];
     
     std::cout << "result box num:" << box_out_num << std::endl;
+    PERF_TIMER();
 
     YUV420SPImage img(buffer, yolov3_model_size, yolov3_model_size);
     YUVColor box_color(0, 0, 0xff);// Red?
@@ -49,12 +50,14 @@ void DetectAndDraw(ACLModel* model, uint8_t* buffer) {
         float y2 = box_info[box_out_num * 3 + i];
         float score = box_info[box_out_num * 4 + i];
         float label = box_info[box_out_num * 5 + i];
+        /*
         std::cout << "box info: x1: " << x1
           << " y2: " << y1
           << " x2: " << x2
           << " y2: " << y2
           << " score: " << score
           << " label: " << yolov3_label[int(label) + 1] << std::endl;
+        */
         img.DrawRect(x1, y1, x2, y2, box_color, 3);
     }
 }
@@ -78,27 +81,31 @@ void StreamThread(std::string input_addr, std::string output_addr) {
     std::cout << model.ToString();
 
     RTSPInput rtsp_input;
-    rtsp_input.Init("rtsp://192.168.1.9:8554/tt.mp4");
+    rtsp_input.Init(input_addr.c_str());
 
-    RtmpContext resized_ctx;
-    resized_ctx.Init("resize", yolov3_model_size, yolov3_model_size);
+    RtmpContext rtmp_output;
+    rtmp_output.Init(output_addr, yolov3_model_size, yolov3_model_size, rtsp_input.GetFramerate());
 
     DvppDecoder decoder;
     decoder.Init(cb_thread.GetPid(), rtsp_input.GetHeight(), rtsp_input.GetWidth());
     decoder.SetDeviceCtx(&ctx);
 
-    DvppEncoder encoder;
-    encoder.Init(cb_thread.GetPid(), yolov3_model_size, yolov3_model_size, &resized_ctx);
+    //DvppEncoder encoder;
+    //encoder.Init(cb_thread.GetPid(), yolov3_model_size, yolov3_model_size, &rtmp_output);
 
     VPCResizeEngine resize_engine(stream);
     resize_engine.Init(rtsp_input.GetHeight(), rtsp_input.GetWidth(), yolov3_model_size, yolov3_model_size);
 
     resize_engine.RegisterHandler([&](uint8_t* buffer){
             DetectAndDraw(&model, buffer);
-            encoder.SendFrame(buffer);
+            //encoder.SendFrame(buffer);
+            rtmp_output.SendFrame(buffer);
         });
 
-    decoder.RegisterHandler([&](uint8_t* buffer){resize_engine.Resize(buffer);});
+    decoder.RegisterHandler([&](uint8_t* buffer){
+        PERF_TIMER();
+        resize_engine.Resize(buffer);
+        });
 
     rtsp_input.RegisterHandler([&](AVPacket* packet){decoder.SendFrame(packet);});
     rtsp_input.Run();
@@ -109,7 +116,7 @@ void StreamThread(std::string input_addr, std::string output_addr) {
     CHECK_ACL(aclrtSynchronizeStream(stream));
 
     resize_engine.Destory();
-    encoder.Destory();
+    //encoder.Destory();
 
     //CHECK_ACL(aclrtUnSubscribeReport(cb_thread.GetPid(), stream));
     //cb_thread.Join();
@@ -152,8 +159,13 @@ int main(int argc, char** argv) {
 
         std::string output_addr(argv[arg_i]);
         ++arg_i;
-
+        std::cout << "Add stream --input " << input_addr
+            << " --output " << output_addr << std::endl;
         streams.emplace_back(StreamThread, input_addr, output_addr);
+    }
+
+    for (auto& t: streams) {
+        t.join();
     }
     
     return 0;
