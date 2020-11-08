@@ -1,7 +1,7 @@
 # Atlas200DK ACL多路推理样例
 这个demo主要包括以下功能点 
-* ffmpeg RTSP视频流输入
-* ffmpeg RTMP视频流输出
+* ffmpeg RTSP/mp4视频流输入
+* ffmpeg RTMP/mp4视频流输出
 * DVPP H264解码
 * DVPP H264编码
 * ACL yolov3推理
@@ -18,7 +18,7 @@
 atc --model=yolov3_pp.prototxt --weight=yolov3.caffemodel --framework=0 --output=sample-yolov3_pp_416 --soc_version=Ascend310 --insert_op_conf=./aipp_yolov3_pp.cfg
 ```
 4. 将得到的sample-yolov3_pp_416.om拷贝到model文件夹中
-## 运行测试
+## 运行测试(RTSP输入RTMP输出)
 1. 在Atlas200DK上启动nginx
 2. 准备两个rtsp视频流，这里使用ubuntu上的vlc命令行为例。这里的视频文件请替换为你对应的测试文件。(vlc在windows上也可以在节目上完成类似的操作。)
 ```
@@ -33,6 +33,16 @@ nohup vlc -v road_traffic_test2.mp4 --sout '#rtp{sdp=rtsp://:8555/tt2.mp4}' &
 ```
 媒体->打开网络串流->输入run.sh中output对应的rtmp地址。(127.0.0.1替换为Atlas200DK在你的网络中对应的IP)
 ```
+
+### MP4输入输出
+现在新增了对MP4输入输出的支持，可以在run.sh中将rtsp或rtmp的输入输出地址替换为Atlas200 DK本地的MP4文件路径(请尽量使用绝对路径)。
+
+示例:
+```
+/build/acl_multi_stream_demo --input input.mp4 --output output.mp4
+```
+### 其他格式
+由于使用的是ffmpeg通用的API所以其他输入输出格式可能也是天然支持的，你可以直接试一下，说不定可以直接使用呢。
 
 ## TODO
 * 现在测试能够支持2路实时推理，支持更多的推理可能还需要做一些修改(yolov3模型现在是1batch的，效率较低)。
