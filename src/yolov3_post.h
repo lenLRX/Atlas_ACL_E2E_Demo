@@ -34,13 +34,14 @@
 #ifndef __YOLOV3_POST_H__
 #define __YOLOV3_POST_H__
 
-#include <vector>
 #include "acl/acl.h"
 #include <stdint.h>
+#include <vector>
 
-#define  sigmoid(x)  (1 / (1 + exp(-1*x)))
+#define sigmoid(x) (1 / (1 + exp(-1 * x)))
 
-aclError yolov3_post(const float nmsThresh, const std::vector<void*>& inputs, const std::vector<size_t>& sizes, int ImgH, int ImgW);
+aclError yolov3_post(const float nmsThresh, const std::vector<void *> &inputs,
+                     const std::vector<size_t> &sizes, int ImgH, int ImgW);
 
 struct BoundingBox {
   uint32_t lt_x;
@@ -129,8 +130,8 @@ public:
    */
   HIAI_StatusT Init(const hiai::AIConfig& config,
                     const std::vector<hiai::AIModelDescription>& model_desc);
-                    
-  #define  sigmoid(x)  (1 / (1 + exp(-1*x)))
+
+#define sigmoid(x) (1 / (1 + exp(-1 * x)))
 
   /**
    * @brief: engine processor which override HIAI engine

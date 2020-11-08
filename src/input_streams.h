@@ -3,7 +3,7 @@
 
 class InputStream {
 public:
-    static InputStream* MakeInputStream();
+  static InputStream *MakeInputStream();
 };
 
-#endif//__INPUT_STREAM__
+#endif //__INPUT_STREAM__

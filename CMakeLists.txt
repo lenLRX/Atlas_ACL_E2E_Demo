@@ -29,9 +29,9 @@ link_directories(
 
 add_library(acl_demo SHARED
         src/dvpp_decoder.cpp
-        src/rtsp_input.cpp
+        src/ffmpeg_input.cpp
         src/acl_model.cpp
-        src/rtmp_stream.cpp
+        src/ffmpeg_output.cpp
         src/vpc_resize.cpp
         src/dvpp_encoder.cpp
         src/yolov3_post.cpp)

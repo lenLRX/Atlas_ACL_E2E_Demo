@@ -7,22 +7,23 @@
 
 #include "util.h"
 
-class RtmpContext;
+class FFMPEGOutput;
 
 class DvppEncoder {
 public:
-    DvppEncoder();
-    ~DvppEncoder();
-    void Destory();
-    aclError Init(const pthread_t thread_id, int h, int w, RtmpContext* ctx);
-    aclError SendFrame(uint8_t* data);
+  DvppEncoder();
+  ~DvppEncoder();
+  void Destory();
+  aclError Init(const pthread_t thread_id, int h, int w, FFMPEGOutput *ctx);
+  aclError SendFrame(uint8_t *data);
+
 private:
-    int height;
-    int width;
-    int size;
-    aclvencChannelDesc* channel_desc;
-    aclvencFrameConfig* frame_config;
-    RtmpContext* rtmp_ctx;
+  int height;
+  int width;
+  int size;
+  aclvencChannelDesc *channel_desc;
+  aclvencFrameConfig *frame_config;
+  FFMPEGOutput *rtmp_ctx;
 };
 
-#endif//__DVPP_ENCODER_H__
+#endif //__DVPP_ENCODER_H__
