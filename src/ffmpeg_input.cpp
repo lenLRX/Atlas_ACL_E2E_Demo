@@ -15,7 +15,7 @@ int FFMPEGInput::Init(const std::string &addr) {
 
   AVDictionary *avdic = nullptr;
 
-  // av_dict_set(&avdic, "rtsp_transport", "udp", 0);
+  // av_dict_set(&avdic, "rtsp_transport", "tcp", 0);
   // av_dict_set(&avdic, "max_delay", "100", 0);
 
   int ret = avformat_open_input(&av_fc, addr.c_str(), nullptr, &avdic);
@@ -62,8 +62,10 @@ int FFMPEGInput::Init(const std::string &addr) {
   std::cout << "ref frame num: " << av_cc->refs << std::endl;
   std::cout << "has B frame: " << av_cc->has_b_frames << std::endl;
   std::cout << "pix format: " << av_cc->pix_fmt << std::endl;
+  std::cout << "codec_tag " << av_cc->codec_tag << std::endl;
+  std::cout << "extra_data size: " << av_cc->extradata_size << std::endl;
 
-  if (av_cc->codec_tag == AVC1_TAG) {
+  if (true || av_cc->codec_tag == AVC1_TAG) {
     bsf_filter = av_bsf_get_by_name("h264_mp4toannexb");
     ret = av_bsf_alloc(bsf_filter, &bsfc);
     if (ret < 0) {
@@ -123,6 +125,11 @@ AVRational FFMPEGInput::GetFramerate() {
 }
 
 void FFMPEGInput::Run() {
+  AVPacket packet;
+  av_init_packet(&packet);
+  packet.data = av_cc->extradata;
+  packet.size = av_cc->extradata_size;
+  packet_handler(&packet);
   if (need_bsf) {
     while (ReceivePacketWithBSF())
       ;

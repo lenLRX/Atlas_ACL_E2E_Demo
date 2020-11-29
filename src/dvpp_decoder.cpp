@@ -71,7 +71,7 @@ void DvppDecoder::Destory() {
 }
 
 aclError DvppDecoder::SendFrame(AVPacket *packet) {
-  std::cout << "DvppDecoder::SendFrame Enter" << std::endl;
+  // std::cout << "DvppDecoder::SendFrame Enter" << std::endl;
   AVPacket *frame_packet = new AVPacket();
   av_packet_ref(frame_packet, packet);
 
@@ -92,10 +92,10 @@ aclError DvppDecoder::SendFrame(AVPacket *packet) {
   acldvppSetPicDescFormat(output, PIXEL_FORMAT_YUV_SEMIPLANAR_420);
 
   DecoderContext *ctx = new DecoderContext(this, frame_packet);
-  std::cout << "DvppDecoder::SendFrame BeforeSend" << std::endl;
+  // std::cout << "DvppDecoder::SendFrame BeforeSend" << std::endl;
   CHECK_ACL(aclvdecSendFrame(channel_desc, stream_desc, output, nullptr, ctx));
 
-  std::cout << "DvppDecoder::SendFrame Exit" << std::endl;
+  // std::cout << "DvppDecoder::SendFrame Exit" << std::endl;
   return ACL_ERROR_NONE;
 }
 

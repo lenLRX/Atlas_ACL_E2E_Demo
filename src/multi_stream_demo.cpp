@@ -88,7 +88,7 @@ void StreamThread(std::string input_addr, std::string output_addr) {
 
   DvppDecoder decoder;
   decoder.Init(cb_thread.GetPid(), ffmpeg_input.GetHeight(),
-               ffmpeg_input.GetWidth());
+               ffmpeg_input.GetWidth(), ffmpeg_input.GetProfile());
   decoder.SetDeviceCtx(&ctx);
 
   // DvppEncoder encoder;

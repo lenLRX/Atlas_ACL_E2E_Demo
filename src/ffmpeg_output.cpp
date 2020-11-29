@@ -2,6 +2,23 @@
 #include "util.h"
 #include <iostream>
 
+/*
+  Parse format from name
+  rtmp   -> "flv"
+  rtsp   -> "rtsp"
+  mp4    -> ""
+  other  -> ""
+*/
+static std::string GuessFormatFromName(const std::string &name) {
+  std::string format;
+  if (name.find("rtmp") == 0) {
+    format = "flv";
+  } else if (name.find("rtsp") == 0) {
+    format = "rtsp";
+  }
+  return format;
+}
+
 int FFMPEGOutput::Init(std::string name, int img_h, int img_w, int frame_rate,
                        int pic_fmt) {
   AVRational av_framerate;
@@ -16,13 +33,16 @@ int FFMPEGOutput::Init(std::string name, int img_h, int img_w,
   const char *output = stream_name.c_str();
   const char *profile = "high444";
 
+  std::string format = GuessFormatFromName(name);
+
   av_register_all();
   avformat_network_init();
   // av_log_set_level(AV_LOG_TRACE);
   int ret = 0;
 
   encoder_avfc = NULL;
-  ret = avformat_alloc_output_context2(&encoder_avfc, NULL, "flv", output);
+  ret = avformat_alloc_output_context2(
+      &encoder_avfc, NULL, format.empty() ? NULL : format.c_str(), output);
   if (ret < 0) {
     std::cerr << "[FFMPEGOutput::Init] avformat_alloc_output_context2 failed"
               << ret << std::endl;
@@ -35,7 +55,11 @@ int FFMPEGOutput::Init(std::string name, int img_h, int img_w,
   if (!(encoder_avfc->oformat->flags & AVFMT_NOFILE)) {
     ret = avio_open2(&encoder_avfc->pb, output, AVIO_FLAG_WRITE, NULL, NULL);
     if (ret < 0) {
-      std::cerr << "[FFMPEGOutput::Init] avio_open2 failed" << std::endl;
+      char err_buf[AV_ERROR_MAX_STRING_SIZE] = {0};
+      std::cerr << "[FFMPEGOutput::Init] avio_open2 failed err code: " << ret
+                << " Reason: "
+                << av_make_error_string(err_buf, AV_ERROR_MAX_STRING_SIZE, ret)
+                << std::endl;
       return ret;
     }
   }
