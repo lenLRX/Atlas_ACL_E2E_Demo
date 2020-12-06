@@ -13,18 +13,24 @@ add_definitions(-DENABLE_DVPP_INTERFACE)
 
 #set(CMAKE_SKIP_RPATH TRUE)
 
-
+if (EXISTS /usr/local/Ascend/acllib/)
+        set(ACL_PATH "/usr/local/Ascend/acllib")
+        message(STATUS "set ACL_PATH: /usr/local/Ascend/acllib")
+else ()
+        set(ACL_PATH "/home/HwHiAiUser/Ascend/acllib")
+        message(STATUS "set ACL_PATH to default path: /home/HwHiAiUser/Ascend/acllib")    
+endif()
 
 # Header path
 include_directories(
 	/usr/local/Ascend/include # for peripheral_api.h
-	/usr/local/Ascend/acllib/include # acl hearders
+	${ACL_PATH}/include # acl hearders
 )
 
 # add host lib path
 link_directories(
 	/usr/lib64/
-	/usr/local/Ascend/acllib/lib64/
+	${ACL_PATH}/lib64/
 )
 
 add_library(acl_demo SHARED
