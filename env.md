@@ -76,10 +76,36 @@ cd /usr/local/nginx/sbin/
 ```
 
 ## 安装acllib
+### 20.0版本
 将Ascend-acllib-1.73.5.1.b050-ubuntu18.04.aarch64-minirc.run传到/root目录下，执行以下命令安装：
 ```
 chmod +x Ascend-acllib-1.73.5.1.b050-ubuntu18.04.aarch64-minirc.run
 ./Ascend-acllib-1.73.5.1.b050-ubuntu18.04.aarch64-minirc.run --full
+```
+### 20.1版本
+以下操作使用HwHiAiUser用户执行
+1. 解压制卡时用到的Ascend-cann-minirc_20.1.rc1_ubuntu18.04-aarch64.zip，将压缩包中的Ascend-acllib-1.75.22.0.220-ubuntu18.04.aarch64-minirc.run文件上传到/home/HwHiAiUser
+2. 安装这个run包
+```
+chmod +x Ascend-acllib-1.75.22.0.220-ubuntu18.04.aarch64-minirc.run
+./Ascend-acllib-1.75.22.0.220-ubuntu18.04.aarch64-minirc.run --full
+```
+实际上制卡时已经安装了这个run包，但是没有使用--full参数，导致没有安装头文件。(有必要节省那一点点空间吗？)
+
+以下操作使用root用户执行，这是为了修复官方的一个BUG。
+```
+chmod u+w /etc/sudoers
+vi /etc/sudoers
+```
+将最后一行改为：
+```
+HwHiAiUser ALL=(root) NOPASSWD:/opt/mini/minirc_install_phase1.sh,/bin/date -s *,/var/ide_cmd.sh *,/bin/sed -i * /etc/network/interfaces,/usr/bin/perf stat *,/usr/bin/perf record *,/usr/bin/perf script *,/usr/bin/pkill -2 perf,/var/tsdaemon_add_to_usermemory.sh
+```
+(加上了",/var/tsdaemon_add_to_usermemory.sh"这一段)
+
+然后修改/var/tsdaemon_add_to_usermemory.sh文件，将echo那一行改为
+```
+echo $1 > /sys/fs/cgroup/memory/cgroup.procs
 ```
 ## 安装demo
 ### 安装依赖
