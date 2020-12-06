@@ -164,8 +164,8 @@ void FFMPEGOutput::SendFrame(const uint8_t *pdata) {
     ret = avcodec_receive_packet(video_avcc, &pkt);
 
     if (ret < 0) {
-      std::cerr << "[FFMPEGOutput::SendFrame] avcodec_receive_packet failed"
-                << std::endl;
+      // std::cerr << "[FFMPEGOutput::SendFrame] avcodec_receive_packet failed"
+      //          << std::endl;
       av_packet_unref(&pkt);
       return;
     }

@@ -155,4 +155,15 @@ h264_ffmpeg_profile_to_acl_stream_fromat(int profile) {
   }
 }
 
+static int ParseCameraInput(const std::string &addr) {
+  // Since Atlas200DK only support camera 0 and 1
+  // we don't have to parse camera id
+  if (addr == "camera0") {
+    return 0;
+  } else if (addr == "camera1") {
+    return 1;
+  }
+  return -1;
+}
+
 #endif //__ACL_UTIL_H__

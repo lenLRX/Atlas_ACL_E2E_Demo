@@ -1,4 +1,5 @@
 #include "acl_model.h"
+#include "camera_input.h"
 #include "drawing.h"
 #include "dvpp_decoder.h"
 #include "dvpp_encoder.h"
@@ -38,7 +39,7 @@ void DetectAndDraw(ACLModel *model, uint8_t *buffer) {
   int32_t box_out_num = ((int32_t *)output_buffers[1])[0];
 
   std::cout << "result box num:" << box_out_num << std::endl;
-  PERF_TIMER();
+  // PERF_TIMER();
 
   YUV420SPImage img(buffer, yolov3_model_size, yolov3_model_size);
   YUVColor box_color(0, 0, 0xff); // Red?
@@ -51,12 +52,9 @@ void DetectAndDraw(ACLModel *model, uint8_t *buffer) {
     float score = box_info[box_out_num * 4 + i];
     float label = box_info[box_out_num * 5 + i];
     /*
-    std::cout << "box info: x1: " << x1
-      << " y2: " << y1
-      << " x2: " << x2
-      << " y2: " << y2
-      << " score: " << score
-      << " label: " << yolov3_label[int(label) + 1] << std::endl;
+    std::cout << "box info: x1: " << x1 << " y2: " << y1 << " x2: " << x2
+              << " y2: " << y2 << " score: " << score
+              << " label: " << yolov3_label[int(label) + 1] << std::endl;
     */
     img.DrawRect(x1, y1, x2, y2, box_color, 3);
   }
@@ -80,24 +78,41 @@ void StreamThread(std::string input_addr, std::string output_addr) {
   std::cout << model.ToString();
 
   FFMPEGInput ffmpeg_input;
-  ffmpeg_input.Init(input_addr.c_str());
-
   FFMPEGOutput ffmpeg_output;
-  ffmpeg_output.Init(output_addr, yolov3_model_size, yolov3_model_size,
-                     ffmpeg_input.GetFramerate());
-
   DvppDecoder decoder;
-  decoder.Init(cb_thread.GetPid(), ffmpeg_input.GetHeight(),
-               ffmpeg_input.GetWidth(), ffmpeg_input.GetProfile());
-  decoder.SetDeviceCtx(&ctx);
+  VPCResizeEngine resize_engine(stream);
+  CameraInput camera_input;
+
+  auto resize_handler = [&](uint8_t *buffer) {
+    // PERF_TIMER();
+    resize_engine.Resize(buffer);
+  };
+
+  int camera_id = ParseCameraInput(input_addr);
+  int width, height;
+  if (camera_id < 0) {
+    ffmpeg_input.Init(input_addr.c_str());
+    ffmpeg_output.Init(output_addr, yolov3_model_size, yolov3_model_size,
+                       ffmpeg_input.GetFramerate());
+    width = ffmpeg_input.GetWidth();
+    height = ffmpeg_input.GetHeight();
+    decoder.Init(cb_thread.GetPid(), height, width, ffmpeg_input.GetProfile());
+    decoder.SetDeviceCtx(&ctx);
+
+    decoder.RegisterHandler(resize_handler);
+  } else {
+    camera_input.Init(camera_id);
+    camera_input.RegisterHandler(resize_handler);
+    width = camera_input.GetWidth();
+    height = camera_input.GetHeight();
+    ffmpeg_output.Init(output_addr, yolov3_model_size, yolov3_model_size, 20);
+  }
 
   // DvppEncoder encoder;
   // encoder.Init(cb_thread.GetPid(), yolov3_model_size, yolov3_model_size,
   // &ffmpeg_output);
 
-  VPCResizeEngine resize_engine(stream);
-  resize_engine.Init(ffmpeg_input.GetHeight(), ffmpeg_input.GetWidth(),
-                     yolov3_model_size, yolov3_model_size);
+  resize_engine.Init(height, width, yolov3_model_size, yolov3_model_size);
 
   resize_engine.RegisterHandler([&](uint8_t *buffer) {
     DetectAndDraw(&model, buffer);
@@ -105,17 +120,15 @@ void StreamThread(std::string input_addr, std::string output_addr) {
     ffmpeg_output.SendFrame(buffer);
   });
 
-  decoder.RegisterHandler([&](uint8_t *buffer) {
-    PERF_TIMER();
-    resize_engine.Resize(buffer);
-  });
+  if (camera_id < 0) {
+    ffmpeg_input.RegisterHandler(
+        [&](AVPacket *packet) { decoder.SendFrame(packet); });
+    ffmpeg_input.Run();
 
-  ffmpeg_input.RegisterHandler(
-      [&](AVPacket *packet) { decoder.SendFrame(packet); });
-  ffmpeg_input.Run();
-
-  decoder.Destory();
-
+    decoder.Destory();
+  } else {
+    camera_input.Run();
+  }
   CHECK_ACL(aclrtSynchronizeStream(stream));
 
   resize_engine.Destory();
@@ -124,7 +137,7 @@ void StreamThread(std::string input_addr, std::string output_addr) {
 
   // CHECK_ACL(aclrtUnSubscribeReport(cb_thread.GetPid(), stream));
   // cb_thread.Join();
-  std::cout << "End of stream" << std::endl;
+  std::cout << "End of stream input: " << input_addr << std::endl;
 }
 
 int main(int argc, char **argv) {

@@ -34,7 +34,8 @@ add_library(acl_demo SHARED
         src/ffmpeg_output.cpp
         src/vpc_resize.cpp
         src/dvpp_encoder.cpp
-        src/yolov3_post.cpp)
+        src/yolov3_post.cpp
+        src/camera_input.cpp)
 
 target_link_libraries(acl_demo
         ascendcl
