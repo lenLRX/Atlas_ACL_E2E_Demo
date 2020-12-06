@@ -1,6 +1,6 @@
 # Atlas200DK ACL多路推理样例
 这个demo主要包括以下功能点 
-* ffmpeg RTSP/mp4视频流输入
+* ffmpeg RTSP/mp4/摄像头视频流输入
 * ffmpeg RTMP/RTSP/mp4视频流输出
 * DVPP H264解码
 * DVPP H264编码(demo中暂时没有开启，因为ACL限制每个进程只能有一个VENC的流，所以现在使用软件编码)
@@ -47,6 +47,14 @@ nohup vlc -v road_traffic_test2.mp4 --sout '#rtp{sdp=rtsp://:8555/tt2.mp4}' &
 示例：
 ```
 ./build/acl_multi_stream_demo --input input.mp4 --output rtsp://192.168.1.9/stream1
+```
+### 摄像头输入
+现在新增了对Atlas200DK摄像头输入的支持，可以在run.sh中将输入地址替换为camemra0或camera1。
+
+摄像头输入规格： 720P @ 20fps
+示例：
+```
+./build/acl_multi_stream_demo --input camera0 --output rtsp://192.168.1.9/stream1
 ```
 ### 其他格式
 由于使用的是ffmpeg通用的API所以其他输入输出格式可能也是天然支持的，你可以直接试一下，说不定可以直接使用呢。
