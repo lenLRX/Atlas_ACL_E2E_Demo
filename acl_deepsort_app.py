@@ -46,8 +46,6 @@ def make_detections(boxes, scores, features):
     boxes = boxes.astype("float64")
     scores = scores.astype("float64")
     detection_num = len(boxes)
-    print("boxes", boxes)
-    print("scores", scores)
 
     detections = []
 
