@@ -34,7 +34,7 @@ int CameraCallBack(const void *pdata, int size, void *param) {
   }
   {
     PERF_TIMER();
-    CHECK_ACL(ctx->resize->Resize((const uint8_t *)pdata));
+    CHECK_ACL(ctx->resize->Resize((uint8_t *)pdata));
   }
 
   const uint8_t *resized_buffer =

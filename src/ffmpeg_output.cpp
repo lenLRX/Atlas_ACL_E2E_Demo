@@ -80,10 +80,10 @@ int FFMPEGOutput::Init(std::string name, int img_h, int img_w,
   video_avcc->pix_fmt =
       (AVPixelFormat)pic_fmt; // AV_PIX_FMT_NV12;// NV12 IS YUV420
   // control rate
-  video_avcc->bit_rate = 2 * 1000 * 1000;
-  video_avcc->rc_buffer_size = 4 * 1000 * 1000;
-  video_avcc->rc_max_rate = 2 * 1000 * 1000;
-  video_avcc->rc_min_rate = 2.5 * 1000 * 1000;
+  video_avcc->bit_rate = 0;
+  video_avcc->rc_buffer_size = 0;
+  video_avcc->rc_max_rate = 0;
+  video_avcc->rc_min_rate = 0;
   video_avcc->time_base.num = frame_rate.den;
   video_avcc->time_base.den = frame_rate.num;
   // video_avcc->gop_size = 0;

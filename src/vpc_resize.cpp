@@ -46,13 +46,13 @@ void VPCResizeEngine::Destory() {
   // TODO: other clean up
 }
 
-aclError VPCResizeEngine::Resize(const uint8_t *pdata) {
+aclError VPCResizeEngine::Resize(uint8_t *pdata) {
   memcpy(dvpp_input_mem, pdata, input_buffer_size);
   CHECK_ACL(acldvppVpcResizeAsync(channel_desc, input_desc, output_desc,
                                   resize_config, stream));
   CHECK_ACL(aclrtSynchronizeStream(stream));
   if (buffer_handler) {
-    buffer_handler(GetOutputBuffer());
+    buffer_handler(GetOutputBuffer(), pdata);
   }
   return ACL_ERROR_NONE;
 }
@@ -63,6 +63,6 @@ uint8_t *VPCResizeEngine::GetOutputBuffer() {
 
 int VPCResizeEngine::GetOutputBufferSize() { return output_buffer_size; }
 
-void VPCResizeEngine::RegisterHandler(std::function<void(uint8_t *)> handler) {
+void VPCResizeEngine::RegisterHandler(CallBack handler) {
   buffer_handler = handler;
 }

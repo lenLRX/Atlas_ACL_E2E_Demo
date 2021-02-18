@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <iostream>
 #include <stdint.h>
+#include <cmath>
 
 class YUVColor {
 public:
@@ -34,27 +35,47 @@ public:
     }
 
     int i, j;
+    int i_bound, j_bound;
+    int i_start, j_start;
 
-    for (j = y1; j < y1 + width; ++j) {
-      for (i = x1; i <= x2; ++i) {
+    j_bound = std::min(img_h, y1 + width);
+    i_bound = std::min(img_w - 1, x2);
+
+    for (j = y1; j < j_bound; ++j) {
+      for (i = x1; i <= i_bound; ++i) {
         SetPixel(j, i, color);
       }
     }
 
-    for (j = y2 - width + 1; j <= y2; ++j) {
-      for (i = x1; i <= x2; ++i) {
+    j_start = std::max(0, y2 - width + 1);
+    j_bound = std::min(img_h - 1, y2);
+
+    i_start = std::max(0, x1);
+    i_bound = std::min(img_w - 1, x2);
+
+    for (j = j_start; j <= j_bound; ++j) {
+      for (i = i_start; i <= i_bound; ++i) {
         SetPixel(j, i, color);
       }
     }
 
-    for (i = x1; i < x1 + width; ++i) {
-      for (j = y1; j <= y2; ++j) {
+    i_bound = std::min(img_w, x1 + width);
+    j_bound = std::min(img_h - 1, y2);
+
+    for (i = x1; i < i_bound; ++i) {
+      for (j = y1; j <= j_bound; ++j) {
         SetPixel(j, i, color);
       }
     }
 
-    for (i = x2 - width + 1; i <= x2; ++i) {
-      for (j = y1; j <= y2; ++j) {
+    i_start = std::max(0, x2 - width + 1);
+    i_bound = std::min(img_w - 1, x2);
+
+    j_start = std::max(0, y1);
+    j_bound = std::min(img_h - 1, y2);
+
+    for (i = i_start; i <= i_bound; ++i) {
+      for (j = j_start; j <= j_bound; ++j) {
         SetPixel(j, i, color);
       }
     }

@@ -92,7 +92,7 @@ int main(int argc, char **argv) {
   resize_engine.Init(rtsp_input.GetHeight(), rtsp_input.GetWidth(),
                      yolov3_model_size, yolov3_model_size);
 
-  resize_engine.RegisterHandler([&](uint8_t *buffer) {
+  resize_engine.RegisterHandler([&](uint8_t *buffer, uint8_t * raw_buffer) {
     DetectAndDraw(&model, buffer);
     encoder.SendFrame(buffer);
   });

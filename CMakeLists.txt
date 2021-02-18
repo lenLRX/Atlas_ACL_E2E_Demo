@@ -6,6 +6,9 @@ cmake_minimum_required(VERSION 3.5.1)
 # project information
 project(acl_cam)
 
+option(BUILD_DEEP_SORT "build deepsort demo" OFF)
+option(BUILD_ALL_DEMO "build all useless demo" OFF)
+
 # Compile options
 add_compile_options(-std=c++17 -g -O0)
 
@@ -25,7 +28,11 @@ endif()
 include_directories(
 	/usr/local/Ascend/include # for peripheral_api.h
 	${ACL_PATH}/include # acl hearders
-)
+        ${CMAKE_SOURCE_DIR}/src)
+
+if(BUILD_DEEP_SORT)
+    include_directories(/usr/include/python3.6)
+endif(BUILD_DEEP_SORT)
 
 # add host lib path
 link_directories(
@@ -39,6 +46,8 @@ add_library(acl_demo SHARED
         src/acl_model.cpp
         src/ffmpeg_output.cpp
         src/vpc_resize.cpp
+        src/vpc_batch_crop.cpp
+        src/jpeg_encode.cpp
         src/dvpp_encoder.cpp
         src/yolov3_post.cpp
         src/camera_input.cpp)
@@ -57,6 +66,8 @@ target_link_libraries(acl_demo
         avformat
         avutil
         avcodec)
+
+if(BUILD_ALL_DEMO)
 
 add_executable(acl_cam
         src/main.cpp)
@@ -90,8 +101,21 @@ add_executable(rtsp_test
 target_link_libraries(rtsp_test
         acl_demo)
 
+endif(BUILD_ALL_DEMO)
+
 add_executable(acl_multi_stream_demo
         src/multi_stream_demo.cpp)
 
 target_link_libraries(acl_multi_stream_demo
         acl_demo)
+
+
+if(BUILD_DEEP_SORT)
+    add_executable(deepsort_test
+        src/deep_sort/deep_sort_main.cpp
+        src/deep_sort/deep_sort_py.cpp)
+
+    target_link_libraries(deepsort_test
+        acl_demo
+        python3.6m)
+endif(BUILD_DEEP_SORT)

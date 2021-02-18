@@ -9,16 +9,17 @@
 
 class VPCResizeEngine {
 public:
+  typedef std::function<void(uint8_t *, uint8_t*)> CallBack;
   VPCResizeEngine(aclrtStream stream);
   ~VPCResizeEngine();
   void Destory();
 
   aclError Init(int src_h, int src_w, int dst_h, int dst_w);
 
-  aclError Resize(const uint8_t *pdata);
+  aclError Resize(uint8_t *pdata);
   uint8_t *GetOutputBuffer();
   int GetOutputBufferSize();
-  void RegisterHandler(std::function<void(uint8_t *)> handler);
+  void RegisterHandler(CallBack handler);
 
 private:
   acldvppChannelDesc *channel_desc;
@@ -33,7 +34,7 @@ private:
   int output_buffer_size;
   int input_buffer_size;
 
-  std::function<void(uint8_t *)> buffer_handler;
+  CallBack buffer_handler;
 };
 
 #endif //__VPC_RESIZE_H__
