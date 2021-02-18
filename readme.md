@@ -51,7 +51,7 @@ nohup vlc -v road_traffic_test2.mp4 --sout '#rtp{sdp=rtsp://:8555/tt2.mp4}' &
 ./build/acl_multi_stream_demo --input input.mp4 --output rtsp://192.168.1.9/stream1
 ```
 ### 摄像头输入
-现在新增了对Atlas200DK摄像头输入的支持，可以在run.sh中将输入地址替换为camemra0或camera1。
+现在新增了对Atlas200DK摄像头输入的支持，可以在run.sh中将输入地址替换为camera0或camera1。
 
 摄像头输入规格： 720P @ 20fps
 示例：

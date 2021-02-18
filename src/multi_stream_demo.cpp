@@ -105,7 +105,7 @@ void StreamThread(std::string input_addr, std::string output_addr) {
     camera_input.RegisterHandler(resize_handler);
     width = camera_input.GetWidth();
     height = camera_input.GetHeight();
-    ffmpeg_output.Init(output_addr, yolov3_model_size, yolov3_model_size, 20);
+    ffmpeg_output.Init(output_addr, yolov3_model_size, yolov3_model_size, camera_input.GetFPS());
   }
 
   // DvppEncoder encoder;
