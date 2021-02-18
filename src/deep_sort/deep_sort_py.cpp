@@ -1,4 +1,6 @@
 #include "deep_sort_py.h"
+#include "util.h"
+
 #include "numpy/ndarraytypes.h"
 #include "numpy/ndarrayobject.h"
 
@@ -96,6 +98,7 @@ void deep_sort_py_func(int feature_num,
                        void* scores,
                        void* feature_data,
                        std::vector<std::vector<int>>& trackings) {
+  PERF_TIMER();
   PyEnv& env = PyEnv::GetInstance();
 
   npy_intp boxes_dim[2] = {feature_num, 4};

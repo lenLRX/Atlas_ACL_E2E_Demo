@@ -40,10 +40,12 @@ void DetectAndDraw(ACLModel *yolo_model,
   int pic_size = yolo_model->GetInputBufferSizes()[0];
   memcpy(input_buffers[0], buffer, pic_size);
   float *img_info = (float *)input_buffers[1];
+  float h_ratio = height / (float)yolov3_model_size;
+  float w_ratio = width / (float)yolov3_model_size;
   img_info[0] = yolov3_model_size;
   img_info[1] = yolov3_model_size;
-  img_info[2] = height; // scale H
-  img_info[3] = width; // scale W
+  img_info[2] = yolov3_model_size; // scale H
+  img_info[3] = yolov3_model_size; // scale W
 
   yolo_model->Infer();
 
@@ -65,31 +67,6 @@ void DetectAndDraw(ACLModel *yolo_model,
   colors.emplace_back(225, 0, 148); // Yellow
   colors.emplace_back(178, 171, 0); // Cyan
   colors.emplace_back(105, 212, 234); // Magenta
-  
-
-  // test global jpeg
-  acldvppPicDesc* global_jpg_desc = acldvppCreatePicDesc();
-  acldvppSetPicDescFormat(global_jpg_desc, PIXEL_FORMAT_YUV_SEMIPLANAR_420);
-  acldvppSetPicDescWidth(global_jpg_desc, width);
-  acldvppSetPicDescHeight(global_jpg_desc, height);
-  acldvppSetPicDescWidthStride(global_jpg_desc, align_up(width, 16));
-  acldvppSetPicDescHeightStride(global_jpg_desc, align_up(height, 2));
-  acldvppSetPicDescSize(global_jpg_desc, raw_buffer_size);
-
-  static int int_global_no = 0;
-  std::stringstream ss1;
-  ss1 << "tmp/global_img_" << int_global_no << ".jpg";
-  ++int_global_no;
-
-  void* global_jpeg_input_buffer;
-  acldvppMalloc(&global_jpeg_input_buffer, raw_buffer_size);
-  memcpy(global_jpeg_input_buffer, raw_buffer, raw_buffer_size);
-  acldvppSetPicDescData(global_jpg_desc, global_jpeg_input_buffer);
-  std::string global_path = ss1.str();
-  //JPEGEncoder::Save(global_path, global_jpg_desc, stream);
-  acldvppFree(global_jpeg_input_buffer);
-  // test global jpeg end
-  //exit(0);
 
   if (box_out_num > 0) {
     const int feature_h = 128;
@@ -105,14 +82,6 @@ void DetectAndDraw(ACLModel *yolo_model,
     std::vector<int32_t> boxes; // format (x,y,w,h)
     std::vector<float> scores;
 
-    acldvppPicDesc* jpg_desc = acldvppCreatePicDesc();
-    acldvppSetPicDescFormat(jpg_desc, PIXEL_FORMAT_YUV_SEMIPLANAR_420);
-    acldvppSetPicDescWidth(jpg_desc, feature_w);
-    acldvppSetPicDescHeight(jpg_desc, feature_h);
-    acldvppSetPicDescWidthStride(jpg_desc, align_up(feature_w, 16));
-    acldvppSetPicDescHeightStride(jpg_desc, align_up(feature_h, 2));
-    acldvppSetPicDescSize(jpg_desc, feature_pic_size);
-
     for (int batch_i = 0;batch_i <= batch_num; batch_i++) {
       int batch_size = deepsort_batch_size;
       if (batch_i == batch_num) {
@@ -127,21 +96,21 @@ void DetectAndDraw(ACLModel *yolo_model,
 
       for (int i = 0; i < batch_size; ++i) {
         int box_idx = deepsort_batch_size * batch_i + i;
-        float x1 = box_info[box_out_num * 0 + box_idx];
-        float y1 = box_info[box_out_num * 1 + box_idx];
-        float x2 = box_info[box_out_num * 2 + box_idx];
-        float y2 = box_info[box_out_num * 3 + box_idx];
+        float x1 = box_info[box_out_num * 0 + box_idx] * w_ratio;
+        float y1 = box_info[box_out_num * 1 + box_idx] * h_ratio;
+        float x2 = box_info[box_out_num * 2 + box_idx] * w_ratio;
+        float y2 = box_info[box_out_num * 3 + box_idx] * h_ratio;
         float score = box_info[box_out_num * 4 + box_idx];
         float label = box_info[box_out_num * 5 + box_idx];
 
         int ilabel = int(label) + 1;
-        
+        /*
         std::cout << "box idx:" << box_idx << 
                    " info: x1: " << x1 << " y1: " << y1
                    << " x2: " << x2
                   << " y2: " << y2 << " score: " << score
                   << " label: " << yolov3_label[ilabel] << std::endl;
-        
+        */
         // only track person
         if (ilabel != person_class_id) {
           continue;
@@ -182,9 +151,6 @@ else if (value > bound) {\
         __CHECK_IN_RANGE(odd_x2, width);
         __CHECK_IN_RANGE(even_y1, height);
         __CHECK_IN_RANGE(odd_y2, height);
-
-        std::cout << "video_width: " << width << " video_width:" << height << std::endl;
-        std::cout << "x_width: " << x_width << " y_width:" << y_width << std::endl;
 
         boxes.push_back(even_x1);
         boxes.push_back(even_y1);
@@ -228,23 +194,7 @@ else if (value > bound) {\
              deepsort_model->GetOutputBuffer()[0],
              output_feature_size * batch_size);
       output_index += batch_size;
-
-      // debug only
-      static int jpeg_i = 0;
-      for (int i = 0; i < batch_size; ++i) {
-        std::stringstream ss;
-        ss << "tmp/crop_img_" << jpeg_i << ".jpg";
-        ++jpeg_i;
-        std::string path = ss.str();
-        void* jpeg_input_buffer;
-        acldvppMalloc(&jpeg_input_buffer, feature_pic_size);
-        memcpy(jpeg_input_buffer, vec_dst_addr[i], feature_pic_size);
-        acldvppSetPicDescData(jpg_desc, jpeg_input_buffer);
-        //JPEGEncoder::Save(path, jpg_desc, stream);
-        acldvppFree(jpeg_input_buffer);
-      }
     }
-    acldvppDestroyPicDesc(jpg_desc);
     std::vector<std::vector<int>> trackings;
     {
       deep_sort_py_func(output_index, boxes.data(),

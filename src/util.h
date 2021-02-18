@@ -37,7 +37,7 @@ public:
 
     std::stringstream ss;
     ss << file_ << ":" << line_ << " func:" << func_
-       << " duration:" << duration_us.count() << "us";
+       << " duration:" << duration_us.count() / 1000.f << "ms";
     std::cerr << ss.str() << std::endl;
   }
 
