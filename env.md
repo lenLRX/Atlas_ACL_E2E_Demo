@@ -83,8 +83,8 @@ chmod +x Ascend-acllib-1.73.5.1.b050-ubuntu18.04.aarch64-minirc.run
 ./Ascend-acllib-1.73.5.1.b050-ubuntu18.04.aarch64-minirc.run --full
 ```
 ### 20.1版本
-以下操作使用HwHiAiUser用户执行
-1. 解压制卡时用到的Ascend-cann-minirc_20.1.rc1_ubuntu18.04-aarch64.zip，将压缩包中的Ascend-acllib-1.75.22.0.220-ubuntu18.04.aarch64-minirc.run文件上传到/home/HwHiAiUser
+以下操作使用root用户执行
+1. 解压制卡时用到的Ascend-cann-minirc_20.1.rc1_ubuntu18.04-aarch64.zip，将压缩包中的Ascend-acllib-1.75.22.0.220-ubuntu18.04.aarch64-minirc.run文件上传到/root
 2. 安装这个run包
 ```
 chmod +x Ascend-acllib-1.75.22.0.220-ubuntu18.04.aarch64-minirc.run

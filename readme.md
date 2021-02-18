@@ -5,6 +5,7 @@
 * DVPP H264解码
 * DVPP H264编码(demo中暂时没有开启，因为ACL限制每个进程只能有一个VENC的流，所以现在使用软件编码)
 * ACL yolov3推理
+* [ACL yolov3+deepsort推理](deepsort.md)
 
 ## 支持版本
 20.0以及20.1
