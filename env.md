@@ -107,6 +107,23 @@ HwHiAiUser ALL=(root) NOPASSWD:/opt/mini/minirc_install_phase1.sh,/bin/date -s *
 ```
 echo $1 > /sys/fs/cgroup/memory/cgroup.procs
 ```
+### 3.3.0版本
+以下操作使用root用户执行
+
+将Ascend-cann-nnrt_3.3.0.alpha001_linux-aarch64.run传到/root目录下,首先解压:
+```
+chmod +x Ascend-cann-nnrt_3.3.0.alpha001_linux-aarch64.run
+./Ascend-cann-nnrt_3.3.0.alpha001_linux-aarch64.run --extract=.
+```
+这里会报一个错，但是不影响，请忽略:
+```
+[NNRT] [20210313-05:51:01] [ERROR] Unsupported parameters: --keep
+```
+然后安装acllib
+```
+cd run_package/
+./Ascend-acllib-1.77.t21.0.b210-linux.aarch64.run --full
+```
 ## 安装demo
 ### 安装依赖
 使用root用户安装以下依赖：
