@@ -8,7 +8,7 @@
 su root
 vi /etc/ssh/sshd_config
 ```
-将PermetRootLogin这一行改成PermitRootLogin yes,注意去掉行首的#
+将PermitRootLogin这一行改成PermitRootLogin yes,注意去掉行首的#
 然后保存退出，重启sshd服务
 ```
 service sshd restart
