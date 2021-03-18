@@ -23,6 +23,6 @@ jobs:
           dst_key: ${{ secrets.GITEE_PRIVATE_KEY }}
           dst_token: ${{ secrets.GITEE_TOKEN }}
           account_type: user
-          static_list: 'Atlass200DK_ACL'
+          static_list: 'Atlas200DK_ACL'
           force_update: true
           debug: true
