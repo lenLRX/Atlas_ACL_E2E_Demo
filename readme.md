@@ -6,6 +6,7 @@
 * DVPP H264编码(demo中暂时没有开启，因为ACL限制每个进程只能有一个VENC的流，所以现在使用软件编码)
 * ACL yolov3推理
 * [ACL yolov3+deepsort推理](deepsort.md)
+* 在YUV420SP图像上的[画框](src/drawing.h)和[中文字符显示](src/freetype_helper.cpp)
 
 ## 支持版本
 20.0,20.1,20.2(3.2.0),3.3.0

@@ -57,6 +57,7 @@ void DetectAndDraw(ACLModel *model, uint8_t *buffer) {
               << " label: " << yolov3_label[int(label) + 1] << std::endl;
     */
     img.DrawRect(x1, y1, x2, y2, box_color, 3);
+    img.DrawText(x1, y2, yolov3_label_zh_cn[int(label) + 1], box_color);
   }
 }
 

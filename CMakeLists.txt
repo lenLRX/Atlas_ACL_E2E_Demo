@@ -12,6 +12,8 @@ option(BUILD_ALL_DEMO "build all useless demo" OFF)
 # Compile options
 add_compile_options(-std=c++17 -g -O0)
 
+find_package(Freetype REQUIRED)
+
 add_definitions(-DENABLE_DVPP_INTERFACE)
 
 #set(CMAKE_SKIP_RPATH TRUE)
@@ -28,7 +30,8 @@ endif()
 include_directories(
 	/usr/local/Ascend/include # for peripheral_api.h
 	${ACL_PATH}/include # acl hearders
-        ${CMAKE_SOURCE_DIR}/src)
+        ${CMAKE_SOURCE_DIR}/src
+        ${FREETYPE_INCLUDE_DIRS})
 
 if(BUILD_DEEP_SORT)
     include_directories(/usr/include/python3.6)
@@ -50,7 +53,8 @@ add_library(acl_demo SHARED
         src/jpeg_encode.cpp
         src/dvpp_encoder.cpp
         src/yolov3_post.cpp
-        src/camera_input.cpp)
+        src/camera_input.cpp
+        src/freetype_helper.cpp)
 
 target_link_libraries(acl_demo
         ascendcl
@@ -65,7 +69,8 @@ target_link_libraries(acl_demo
         opencv_videoio
         avformat
         avutil
-        avcodec)
+        avcodec
+        ${FREETYPE_LIBRARIES})
 
 if(BUILD_ALL_DEMO)
 

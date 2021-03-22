@@ -141,12 +141,16 @@ cd run_package/
 ### 安装依赖
 使用root用户安装以下依赖：
 ```
-apt install cmake git libopencv-dev
+apt install cmake git libopencv-dev fonts-droid-fallback libfreetype6-dev
 ```
 ### 下载并编译
 <b>以下操作使用HwHiAiUser账户</b>
 ```
-git clone https://github.com/lenLRX/Atlas200DK_ACL.git
+git clone https://github.com/lenLRX/Atlas_ACL_E2E_Demo.git
 cd Atlas200DK_ACL
 ./build.sh
+```
+如果github下载速度太慢，可以使用gitte的镜像:
+```
+git clone https://gitee.com/lenlrx/Atlas_ACL_E2E_Demo.git
 ```

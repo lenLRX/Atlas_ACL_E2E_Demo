@@ -3,8 +3,11 @@
 
 #include <algorithm>
 #include <iostream>
+#include <string>
 #include <stdint.h>
 #include <cmath>
+
+#include "freetype_helper.h"
 
 class YUVColor {
 public:
@@ -22,6 +25,10 @@ public:
     uv_addr = img + h * w;
     img_h = h;
     img_w = w;
+  }
+
+  void DrawText(int x, int y, const std::string& text, const YUVColor &color) {
+    RenderText(x, y, text, &color, this);
   }
 
   void DrawRect(int x1, int y1, int x2, int y2, const YUVColor &color,
@@ -86,6 +93,14 @@ public:
     uint8_t *uv_offset = uv_addr + (h / 2) * img_w + w / 2 * 2;
     uv_offset[0] = color.u;
     uv_offset[1] = color.v;
+  }
+
+  inline int GetHeight() const {
+    return img_h;
+  }
+
+  inline int GetWidth() const {
+    return img_w;
   }
 
 private:

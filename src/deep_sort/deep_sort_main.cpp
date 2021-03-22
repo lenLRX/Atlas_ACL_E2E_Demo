@@ -209,6 +209,7 @@ else if (value > bound) {\
       std::cout << "draw track id:" << track[0]
         << " (" << track[1] << "," << track[2] << ","
         << track[3] << "," << track[4] << ")" << std::endl;
+      img.DrawText(track[1], track[4], std::to_string(track[0]), color);
     }
   }
 }
