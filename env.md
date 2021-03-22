@@ -147,7 +147,7 @@ apt install cmake git libopencv-dev fonts-droid-fallback libfreetype6-dev
 <b>以下操作使用HwHiAiUser账户</b>
 ```
 git clone https://github.com/lenLRX/Atlas_ACL_E2E_Demo.git
-cd Atlas200DK_ACL
+cd Atlas_ACL_E2E_Demo
 ./build.sh
 ```
 如果github下载速度太慢，可以使用gitte的镜像:
