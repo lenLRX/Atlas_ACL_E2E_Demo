@@ -6,6 +6,23 @@ cmake_minimum_required(VERSION 3.5.1)
 # project information
 project(acl_cam)
 
+include(cmake/detect_device.cmake)
+
+if (NOT DEFINED ATLAS_DEVICE)
+        detect_device()
+        message(STATUS "ATLAS_DEVICE not set, detected device type: ${ATLAS_DEVICE}")
+else()
+        message(STATUS "user set device type: ${ATLAS_DEVICE}")
+endif()
+
+if (${ATLAS_DEVICE} STREQUAL "Atlas200DK")
+        set (HAS_LIBMEDIA TRUE)
+else()
+        set (HAS_LIBMEDIA FALSE)
+endif()
+
+message(STATUS "build with libmedia ${HAS_LIBMEDIA}")
+
 option(BUILD_DEEP_SORT "build deepsort demo" OFF)
 option(BUILD_ALL_DEMO "build all useless demo" OFF)
 
@@ -18,9 +35,14 @@ add_definitions(-DENABLE_DVPP_INTERFACE)
 
 #set(CMAKE_SKIP_RPATH TRUE)
 
-if (EXISTS /usr/local/Ascend/acllib/)
+if (DEFINED ACL_PATH)
+        message(STATUS "user set ACL_PATH: ${ACL_PATH}")
+elseif (EXISTS /usr/local/Ascend/acllib/)
         set(ACL_PATH "/usr/local/Ascend/acllib")
         message(STATUS "set ACL_PATH: /usr/local/Ascend/acllib")
+elseif (EXISTS /usr/local/Ascend/ascend-toolkit/latest/acllib)
+        set(ACL_PATH "/usr/local/Ascend/ascend-toolkit/latest/acllib")
+        message(STATUS "set ACL_PATH to default path: /usr/local/Ascend/ascend-toolkit/latest/acllib")    
 else ()
         set(ACL_PATH "/home/HwHiAiUser/Ascend/acllib")
         message(STATUS "set ACL_PATH to default path: /home/HwHiAiUser/Ascend/acllib")    
@@ -43,7 +65,7 @@ link_directories(
 	${ACL_PATH}/lib64/
 )
 
-add_library(acl_demo SHARED
+set(DEMO_LIB_SRC
         src/dvpp_decoder.cpp
         src/ffmpeg_input.cpp
         src/acl_model.cpp
@@ -53,16 +75,20 @@ add_library(acl_demo SHARED
         src/jpeg_encode.cpp
         src/dvpp_encoder.cpp
         src/yolov3_post.cpp
-        src/camera_input.cpp
-        src/freetype_helper.cpp)
+        src/freetype_helper.cpp
+        src/camera_input.cpp)
 
-target_link_libraries(acl_demo
+add_library(acl_demo SHARED
+        ${DEMO_LIB_SRC})
+
+if (${HAS_LIBMEDIA})
+        target_compile_definitions(acl_demo PUBLIC HAS_CAMERA)
+endif()
+
+set(DEMO_DEP_LIBS
         ascendcl
         acl_dvpp
         runtime
-        /usr/lib64/libslog.so
-        /usr/lib64/libc_sec.so
-        /usr/lib64/libmedia_mini.so
         pthread
         opencv_core
         opencv_imgproc
@@ -71,6 +97,18 @@ target_link_libraries(acl_demo
         avutil
         avcodec
         ${FREETYPE_LIBRARIES})
+
+if (${ATLAS_DEVICE} STREQUAL "Atlas200DK")
+        set(DEMO_DEP_LIBS
+                ${DEMO_DEP_LIBS}
+                /usr/lib64/libslog.so
+                /usr/lib64/libc_sec.so
+                /usr/lib64/libmedia_mini.so)
+endif()
+
+target_link_libraries(acl_demo
+        ${DEMO_DEP_LIBS}
+        )
 
 if(BUILD_ALL_DEMO)
 

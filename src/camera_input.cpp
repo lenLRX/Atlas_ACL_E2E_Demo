@@ -1,9 +1,10 @@
+#include "camera_input.h"
+#include "util.h"
+
+#ifdef HAS_CAMERA
 extern "C" {
 #include "peripheral_api.h"
 }
-
-#include "camera_input.h"
-#include "util.h"
 
 static std::string StatusToStr(CameraStatus status) {
   switch (status) {
@@ -100,10 +101,6 @@ int CameraInput::Init(int id) {
   return 0;
 }
 
-void CameraInput::RegisterHandler(std::function<void(uint8_t *)> handler) {
-  buffer_handler = handler;
-}
-
 void CameraInput::Run() {
   while (true) {
     int ret = ReadFrameFromCamera(camera_id, camera_buffer, &cam_buffer_size);
@@ -114,6 +111,24 @@ void CameraInput::Run() {
     buffer_handler(camera_buffer);
   }
 }
+
+#else
+
+CameraInput::~CameraInput() {}
+
+int CameraInput::Init(int id) {
+  throw std::runtime_error("Only Atlas200DK support camera!");
+}
+
+void CameraInput::Run() {
+  throw std::runtime_error("Only Atlas200DK support camera!");
+}
+
+void CameraInput::RegisterHandler(std::function<void(uint8_t *)> handler) {
+  buffer_handler = handler;
+}
+
+#endif
 
 int CameraInput::GetHeight() { return height; }
 
