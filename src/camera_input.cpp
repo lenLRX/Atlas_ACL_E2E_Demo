@@ -87,7 +87,7 @@ int CameraInput::Init(int id) {
 
   cam_buffer_size = yuv420sp_size(height, width);
 
-  camera_buffer = (uint8_t *)malloc(cam_buffer_size);
+  
 
   CameraCapMode cap_mode = CAMERA_CAP_ACTIVE;
 
@@ -103,11 +103,17 @@ int CameraInput::Init(int id) {
 
 void CameraInput::Run() {
   while (true) {
+    uint8_t* camera_buffer = (uint8_t *)malloc(cam_buffer_size);
     int ret = ReadFrameFromCamera(camera_id, camera_buffer, &cam_buffer_size);
     if (ret != LIBMEDIA_STATUS_OK) {
       std::cerr << "ReadFrameFromCamera failed, camera id: " << camera_id << std::endl;
+      free(camera_buffer);
       return;
     }
+    auto dev_cam_buffer = std::shared_ptr<DeviceBufferPtr>(
+      camera_buffer, cam_buffer_size, [](void* mem) {
+        free(mem);
+      });
     buffer_handler(camera_buffer);
   }
 }
@@ -124,7 +130,7 @@ void CameraInput::Run() {
   throw std::runtime_error("Only Atlas200DK support camera!");
 }
 
-void CameraInput::RegisterHandler(std::function<void(uint8_t *)> handler) {
+void CameraInput::RegisterHandler(std::function<void(DeviceBufferPtr)> handler) {
   buffer_handler = handler;
 }
 

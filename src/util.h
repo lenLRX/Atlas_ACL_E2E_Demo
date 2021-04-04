@@ -249,4 +249,10 @@ static int ParseCameraInput(const std::string &addr) {
   return -1;
 }
 
+static bool IsDeviceMode() {
+  aclrtRunMode mode;
+  CHECK_ACL(aclrtGetRunMode(&mode));
+  return mode == ACL_DEVICE;
+}
+
 #endif //__ACL_UTIL_H__

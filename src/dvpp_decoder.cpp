@@ -16,13 +16,13 @@ static void DvppDecCallback(acldvppStreamDesc *input, acldvppPicDesc *output,
   aclrtSetCurrentContext(*ctx->decoder->GetDeviceCtx());
   uint8_t *output_buffer = (uint8_t *)acldvppGetPicDescData(output);
   // std::cout << "DvppDecCallback Enter" << std::endl;
-  // std::cout << "DvppDecCallback frame timestamp:" <<
-  // acldvppGetStreamDescTimestamp(input) << std::endl; std::cout <<
-  // "DvppDecCallback frame RetCode:" << acldvppGetStreamDescRetCode(input) <<
-  // std::endl;
-  ctx->decoder->GetHandler()(output_buffer);
-  // std::cout << "DvppDecCallback Exit" << std::endl;
-  delete[] output_buffer;
+  uint32_t pic_size = acldvppGetPicDescSize(output);
+
+  DeviceBufferPtr host_output_buffer = std::make_shared<DeviceBuffer>(
+    output_buffer, pic_size, DeviceBuffer::DvppMemDeleter());
+
+  ctx->decoder->GetHandler()(host_output_buffer);
+
   av_packet_unref((AVPacket *)ctx->pkt);
   delete ctx->pkt;
   delete ctx;
@@ -71,12 +71,30 @@ void DvppDecoder::Destory() {
 }
 
 aclError DvppDecoder::SendFrame(AVPacket *packet) {
-  // std::cout << "DvppDecoder::SendFrame Enter" << std::endl;
+  std::cout << "DvppDecoder::SendFrame Enter" << std::endl;
   AVPacket *frame_packet = new AVPacket();
   av_packet_ref(frame_packet, packet);
 
+  size_t input_size = frame_packet->size;
+
   acldvppStreamDesc *stream_desc = acldvppCreateStreamDesc();
-  CHECK_ACL(acldvppSetStreamDescData(stream_desc, frame_packet->data));
+
+  DeviceBufferPtr input_dev_buffer;
+
+  if (!IsDeviceMode()) {
+    void* input_buffer;
+    CHECK_ACL(acldvppMalloc(&input_buffer, input_size));
+    CHECK_ACL(aclrtMemcpy(
+      input_buffer, input_size, frame_packet->data,
+      input_size, ACL_MEMCPY_HOST_TO_DEVICE));
+    CHECK_ACL(acldvppSetStreamDescData(stream_desc, input_buffer));
+    input_dev_buffer = std::make_shared<DeviceBuffer>(
+      input_buffer, input_size, DeviceBuffer::DvppMemDeleter());
+  }
+  else {
+    CHECK_ACL(acldvppSetStreamDescData(stream_desc, frame_packet->data));
+  }
+
   CHECK_ACL(acldvppSetStreamDescSize(stream_desc, frame_packet->size));
   CHECK_ACL(acldvppSetStreamDescFormat(
       stream_desc, aclvdecGetChannelDescEnType(channel_desc)));
@@ -85,25 +103,25 @@ aclError DvppDecoder::SendFrame(AVPacket *packet) {
 
   acldvppPicDesc *output = acldvppCreatePicDesc();
 
-  uint8_t *output_buffer = new uint8_t[output_size];
-
+  void* output_buffer;
+  CHECK_ACL(acldvppMalloc(&output_buffer, output_size));
   acldvppSetPicDescData(output, output_buffer);
   acldvppSetPicDescSize(output, output_size);
   acldvppSetPicDescFormat(output, PIXEL_FORMAT_YUV_SEMIPLANAR_420);
 
   DecoderContext *ctx = new DecoderContext(this, frame_packet);
-  // std::cout << "DvppDecoder::SendFrame BeforeSend" << std::endl;
+  std::cout << "DvppDecoder::SendFrame BeforeSend" << std::endl;
   CHECK_ACL(aclvdecSendFrame(channel_desc, stream_desc, output, nullptr, ctx));
 
-  // std::cout << "DvppDecoder::SendFrame Exit" << std::endl;
+  std::cout << "DvppDecoder::SendFrame Exit" << std::endl;
   return ACL_ERROR_NONE;
 }
 
-void DvppDecoder::RegisterHandler(std::function<void(uint8_t *)> handler) {
+void DvppDecoder::RegisterHandler(std::function<void(DeviceBufferPtr)> handler) {
   buffer_handler = handler;
 }
 
-const std::function<void(uint8_t *)> &DvppDecoder::GetHandler() {
+const std::function<void(DeviceBufferPtr)> &DvppDecoder::GetHandler() {
   return buffer_handler;
 }
 

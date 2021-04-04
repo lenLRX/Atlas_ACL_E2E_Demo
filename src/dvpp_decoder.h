@@ -11,8 +11,11 @@ extern "C" {
 #include "acl_cb_thread.h"
 
 #include "util.h"
+#include "acl_model.h"
 
 #include <functional>
+#include <memory>
+
 
 class DvppDecoder {
 public:
@@ -22,8 +25,8 @@ public:
   aclError Init(const pthread_t thread_id, int h, int w,
                 acldvppStreamFormat profile = H264_HIGH_LEVEL);
   aclError SendFrame(AVPacket *packet);
-  void RegisterHandler(std::function<void(uint8_t *)> handler);
-  const std::function<void(uint8_t *)> &GetHandler();
+  void RegisterHandler(std::function<void(DeviceBufferPtr)> handler);
+  const std::function<void(DeviceBufferPtr)> &GetHandler();
   void SetDeviceCtx(aclrtContext *ctx);
   aclrtContext *GetDeviceCtx();
 
@@ -39,7 +42,7 @@ private:
   int timestamp;
   aclvdecChannelDesc *channel_desc;
   aclvdecFrameConfig *frame_config;
-  std::function<void(uint8_t *)> buffer_handler;
+  std::function<void(DeviceBufferPtr)> buffer_handler;
   aclrtContext *dev_ctx;
 };
 
