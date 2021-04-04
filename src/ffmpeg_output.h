@@ -9,6 +9,11 @@ extern "C" {
 }
 
 #include <string>
+#include <chrono>
+
+using Duration = std::chrono::duration<double, std::ratio<1>>;
+using TimePoint = std::chrono::time_point<std::chrono::steady_clock>;
+
 
 class FFMPEGOutput {
 public:
@@ -35,6 +40,11 @@ private:
   std::string stream_name;
   int h;
   int w;
+
+  Duration interval;
+  TimePoint last_sent_tp;
+
+  bool output_is_file;
 
   bool valid{false};
 };

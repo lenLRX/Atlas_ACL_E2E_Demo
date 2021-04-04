@@ -1,6 +1,9 @@
 #include "ffmpeg_output.h"
 #include "util.h"
+
 #include <iostream>
+#include <fstream>
+#include <thread>
 
 /*
   Parse format from name
@@ -29,6 +32,9 @@ int FFMPEGOutput::Init(std::string name, int img_h, int img_w, int frame_rate,
 
 int FFMPEGOutput::Init(std::string name, int img_h, int img_w,
                        AVRational frame_rate, int pic_fmt) {
+  last_sent_tp = std::chrono::steady_clock::now();
+  interval = Duration((double)frame_rate.den/frame_rate.num);
+  std::cout << "FFMPEGOutput::Init frame send interval: " << interval.count() << std::endl;
   stream_name = name;
   const char *output = stream_name.c_str();
   const char *profile = "high444";
@@ -137,6 +143,8 @@ int FFMPEGOutput::Init(std::string name, int img_h, int img_w,
   video_frame->pts = 1;
 
   valid = true;
+  std::ifstream test_f(name.c_str());
+  output_is_file = test_f.good();
   return 0;
 }
 
@@ -149,6 +157,20 @@ void FFMPEGOutput::SendFrame(const uint8_t *pdata) {
   av_image_fill_arrays(video_frame->data, video_frame->linesize, pdata,
                        video_avcc->pix_fmt, video_avcc->width,
                        video_avcc->height, 1);
+
+  if (!output_is_file) {
+    // if output is not file, e.g. RTSP or RTMP
+    // we must not send too fast
+    auto now = std::chrono::steady_clock::now();
+    auto dt = now - last_sent_tp;
+    auto dt_us = std::chrono::duration_cast<std::chrono::microseconds>(dt);
+    auto dt_sec = std::chrono::duration_cast<Duration>(dt_us);
+    auto time_to_sleep = interval - dt_sec;
+    if (time_to_sleep.count() > 0) {
+      std::this_thread::sleep_for(time_to_sleep);
+    }
+    last_sent_tp = std::chrono::steady_clock::now();
+  }
 
   ret = avcodec_send_frame(video_avcc, video_frame);
 
@@ -182,7 +204,6 @@ void FFMPEGOutput::SendFrame(const uint8_t *pdata) {
 
     video_frame->pts += av_rescale_q(1, video_avcc->time_base, avs->time_base);
   }
-
   // std::cerr << "[FFMPEGOutput::SendFrame] End" << std::endl;
 }
 
