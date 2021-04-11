@@ -76,7 +76,9 @@ set(DEMO_LIB_SRC
         src/dvpp_encoder.cpp
         src/yolov3_post.cpp
         src/freetype_helper.cpp
-        src/camera_input.cpp)
+        src/camera_input.cpp
+        src/app_profiler.cpp
+        src/yolov3_stream.cpp)
 
 add_library(acl_demo SHARED
         ${DEMO_LIB_SRC})
@@ -146,12 +148,12 @@ target_link_libraries(rtsp_test
 
 endif(BUILD_ALL_DEMO)
 
-add_executable(acl_multi_stream_demo
-        src/multi_stream_demo.cpp)
 
-target_link_libraries(acl_multi_stream_demo
+add_executable(acl_demo_app
+        src/acl_demo_app.cpp)
+
+target_link_libraries(acl_demo_app
         acl_demo)
-
 
 if(BUILD_DEEP_SORT)
     add_executable(deepsort_test

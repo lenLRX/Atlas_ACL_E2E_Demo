@@ -8,6 +8,9 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <mutex>
+#include <condition_variable>
+#include <deque>
 
 using namespace std::chrono;
 
@@ -254,5 +257,59 @@ static bool IsDeviceMode() {
   CHECK_ACL(aclrtGetRunMode(&mode));
   return mode == ACL_DEVICE;
 }
+
+// from https://stackoverflow.com/questions/12805041/c-equivalent-to-javas-blockingqueue
+template <typename T>
+class ThreadSafeQueue
+{
+private:
+    std::mutex              d_mutex;
+    std::condition_variable d_condition;
+    std::deque<T>           d_queue;
+public:
+    void push(T const& value) {
+        {
+            std::unique_lock<std::mutex> lock(this->d_mutex);
+            d_queue.push_front(value);
+        }
+        this->d_condition.notify_one();
+    }
+    T pop() {
+        std::unique_lock<std::mutex> lock(this->d_mutex);
+        this->d_condition.wait(lock, [=]{ return !this->d_queue.empty(); });
+        T rc(std::move(this->d_queue.back()));
+        this->d_queue.pop_back();
+        return rc;
+    }
+};
+
+template <typename T>
+class ThreadSafeQueueWithCapacity
+{
+private:
+    std::mutex              d_mutex;
+    std::condition_variable empty_cond;
+    std::condition_variable full_cond;
+    std::deque<T>           d_queue;
+    int capacity;
+public:
+    ThreadSafeQueueWithCapacity(int cap): capacity(cap){}
+    void push(T const& value) {
+        {
+            std::unique_lock<std::mutex> lock(this->d_mutex);
+            this->full_cond.wait(lock, [=]{ return this->d_queue.size() < capacity; });
+            d_queue.push_front(value);
+        }
+        this->empty_cond.notify_one();
+    }
+    T pop() {
+        std::unique_lock<std::mutex> lock(this->d_mutex);
+        this->empty_cond.wait(lock, [=]{ return !this->d_queue.empty(); });
+        T rc(std::move(this->d_queue.back()));
+        this->d_queue.pop_back();
+        this->full_cond.notify_one();
+        return rc;
+    }
+};
 
 #endif //__ACL_UTIL_H__

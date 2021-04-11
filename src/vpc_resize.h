@@ -7,10 +7,11 @@
 #include "acl_model.h"
 
 #include <functional>
+#include <tuple>
 
 class VPCResizeEngine {
 public:
-  typedef std::function<void(DeviceBufferPtr, DeviceBufferPtr)> CallBack;
+  using OutTy = std::tuple<DeviceBufferPtr, DeviceBufferPtr>;
   VPCResizeEngine(aclrtStream stream);
   ~VPCResizeEngine();
   void Destory();
@@ -19,8 +20,7 @@ public:
 
   int GetOutputBufferSize();
 
-  aclError Resize(DeviceBufferPtr pdata);
-  void RegisterHandler(CallBack handler);
+  OutTy Process(DeviceBufferPtr pdata);
 
 private:
   acldvppChannelDesc *channel_desc;
@@ -34,8 +34,6 @@ private:
   int src_w;
   int dst_h;
   int dst_w;
-
-  CallBack buffer_handler;
 };
 
 #endif //__VPC_RESIZE_H__

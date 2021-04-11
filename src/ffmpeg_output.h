@@ -11,6 +11,8 @@ extern "C" {
 #include <string>
 #include <chrono>
 
+#include "acl_model.h"
+
 using Duration = std::chrono::duration<double, std::ratio<1>>;
 using TimePoint = std::chrono::time_point<std::chrono::steady_clock>;
 
@@ -24,6 +26,8 @@ public:
   int Init(std::string name, int img_h, int img_w, AVRational frame_rate,
            int pic_fmt = AV_PIX_FMT_NV12);
   bool IsValid();
+
+  void Process(DeviceBufferPtr buffer);
 
   void SendFrame(const uint8_t *pdata);
   void SendEncodedFrame(void *pdata, int size);

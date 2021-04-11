@@ -1,5 +1,6 @@
 #include "ffmpeg_output.h"
 #include "util.h"
+#include "app_profiler.h"
 
 #include <iostream>
 #include <fstream>
@@ -150,7 +151,12 @@ int FFMPEGOutput::Init(std::string name, int img_h, int img_w,
 
 bool FFMPEGOutput::IsValid() { return valid; }
 
+void FFMPEGOutput::Process(DeviceBufferPtr buffer) {
+  SendFrame((const uint8_t*)buffer->GetHostPtr());
+}
+
 void FFMPEGOutput::SendFrame(const uint8_t *pdata) {
+  APP_PROFILE(FFMPEGOutput::SendFrame);
   // std::cerr << "[FFMPEGOutput::SendFrame] Start" << std::endl;
   PERF_TIMER();
   int ret = 0;

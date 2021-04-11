@@ -21,7 +21,7 @@ static void DvppDecCallback(acldvppStreamDesc *input, acldvppPicDesc *output,
   DeviceBufferPtr host_output_buffer = std::make_shared<DeviceBuffer>(
     output_buffer, pic_size, DeviceBuffer::DvppMemDeleter());
 
-  ctx->decoder->GetHandler()(host_output_buffer);
+  ctx->decoder->GetOutputQueue()->push(host_output_buffer);
 
   av_packet_unref((AVPacket *)ctx->pkt);
   delete ctx->pkt;
@@ -68,6 +68,10 @@ void DvppDecoder::Destory() {
   // aclvdecDestroyChannelDesc(channel_desc);
   // aclvdecDestroyFrameConfig(frame_config);
   std::cout << "DvppDecoder::~DvppDecoder End" << std::endl;
+}
+
+void DvppDecoder::Process(AVPacket packet) {
+  SendFrame(&packet);
 }
 
 aclError DvppDecoder::SendFrame(AVPacket *packet) {
@@ -117,12 +121,12 @@ aclError DvppDecoder::SendFrame(AVPacket *packet) {
   return ACL_ERROR_NONE;
 }
 
-void DvppDecoder::RegisterHandler(std::function<void(DeviceBufferPtr)> handler) {
-  buffer_handler = handler;
+void DvppDecoder::SetOutputQueue(ThreadSafeQueueWithCapacity<DeviceBufferPtr>* queue) {
+  output_queue = queue;
 }
 
-const std::function<void(DeviceBufferPtr)> &DvppDecoder::GetHandler() {
-  return buffer_handler;
+ThreadSafeQueueWithCapacity<DeviceBufferPtr>* DvppDecoder::GetOutputQueue() {
+  return output_queue;
 }
 
 void DvppDecoder::SetDeviceCtx(aclrtContext *ctx) { dev_ctx = ctx; }

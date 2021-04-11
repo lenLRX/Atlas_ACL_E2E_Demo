@@ -1,5 +1,6 @@
 #include "ffmpeg_input.h"
 #include "util.h"
+#include "app_profiler.h"
 
 #include <chrono>
 #include <thread>
@@ -92,10 +93,6 @@ int FFMPEGInput::Init(const std::string &addr) {
   return 0;
 }
 
-void FFMPEGInput::RegisterHandler(std::function<void(AVPacket *)> handler) {
-  packet_handler = handler;
-}
-
 int FFMPEGInput::GetHeight() {
   if (av_cc == nullptr) {
     throw std::runtime_error("FFMPEGInput Stream is not Inited!");
@@ -129,7 +126,7 @@ void FFMPEGInput::Run() {
   av_init_packet(&packet);
   packet.data = av_cc->extradata;
   packet.size = av_cc->extradata_size;
-  packet_handler(&packet);
+  output_queue->push(packet);
   if (need_bsf) {
     while (ReceivePacketWithBSF())
       ;
@@ -140,6 +137,7 @@ void FFMPEGInput::Run() {
 }
 
 bool FFMPEGInput::ReceiveSinglePacket() {
+  APP_PROFILE(FFMPEGInput::ReceiveSinglePacket);
   AVPacket packet;
   av_init_packet(&packet);
   packet.data = nullptr;
@@ -157,13 +155,14 @@ bool FFMPEGInput::ReceiveSinglePacket() {
     return false;
   }
   if (packet.stream_index == video_stream) {
-    packet_handler(&packet);
+    output_queue->push(packet);
   }
-  av_packet_unref(&packet);
   return true;
 }
 
 bool FFMPEGInput::ReceivePacketWithBSF() {
+  auto perf_obj = AppProfileGuard("FFMPEGInput::ReceivePacketWithBSF" , __FILE__, __LINE__, false);
+  perf_obj.AddBeginRecord();
   AVPacket packet;
   av_init_packet(&packet);
   packet.data = nullptr;
@@ -175,12 +174,14 @@ bool FFMPEGInput::ReceivePacketWithBSF() {
               << av_make_error_string(err_buf, AV_ERROR_MAX_STRING_SIZE, ret)
               << std::endl;
     av_packet_unref(&packet);
+    perf_obj.AddEndRecord();
     return false;
   }
   if (packet.stream_index == video_stream) {
     ret = av_bsf_send_packet(bsfc, &packet);
     if (ret < 0) {
       std::cout << "av_bsf_send_packet failed" << std::endl;
+      perf_obj.AddEndRecord();
       return false;
     }
     AVPacket filtered_packet;
@@ -188,10 +189,16 @@ bool FFMPEGInput::ReceivePacketWithBSF() {
     filtered_packet.data = nullptr;
     filtered_packet.size = 0;
     while (av_bsf_receive_packet(bsfc, &filtered_packet) == 0) {
-      packet_handler(&filtered_packet);
-      av_packet_unref(&filtered_packet);
+      perf_obj.AddEndRecord();
+      output_queue->push(filtered_packet);
+      perf_obj.AddBeginRecord();
     }
   }
   av_packet_unref(&packet);
+  perf_obj.AddEndRecord();
   return true;
+}
+
+void FFMPEGInput::SetOutputQueue(ThreadSafeQueueWithCapacity<AVPacket>* queue) {
+  output_queue = queue;
 }

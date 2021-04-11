@@ -141,7 +141,7 @@ cd run_package/
 ### 安装依赖
 使用root用户安装以下依赖：
 ```
-apt install cmake git libopencv-dev fonts-droid-fallback libfreetype6-dev
+apt install cmake git libopencv-dev fonts-droid-fallback libfreetype6-dev libspdlog-dev nlohmann-json-dev
 ```
 ### 下载并编译
 <b>以下操作使用HwHiAiUser账户</b>

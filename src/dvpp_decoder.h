@@ -25,8 +25,9 @@ public:
   aclError Init(const pthread_t thread_id, int h, int w,
                 acldvppStreamFormat profile = H264_HIGH_LEVEL);
   aclError SendFrame(AVPacket *packet);
-  void RegisterHandler(std::function<void(DeviceBufferPtr)> handler);
-  const std::function<void(DeviceBufferPtr)> &GetHandler();
+  void Process(AVPacket packet);
+  void SetOutputQueue(ThreadSafeQueueWithCapacity<DeviceBufferPtr>* queue);
+  ThreadSafeQueueWithCapacity<DeviceBufferPtr>* GetOutputQueue();
   void SetDeviceCtx(aclrtContext *ctx);
   aclrtContext *GetDeviceCtx();
 
@@ -42,8 +43,8 @@ private:
   int timestamp;
   aclvdecChannelDesc *channel_desc;
   aclvdecFrameConfig *frame_config;
-  std::function<void(DeviceBufferPtr)> buffer_handler;
   aclrtContext *dev_ctx;
+  ThreadSafeQueueWithCapacity<DeviceBufferPtr>* output_queue{nullptr};
 };
 
 #endif // __DVPP_DECODER_H__

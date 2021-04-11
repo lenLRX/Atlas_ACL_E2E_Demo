@@ -14,16 +14,19 @@ extern "C" {
 #include <iostream>
 #include <string>
 
+#include "util.h"
+
 class FFMPEGInput {
 public:
   FFMPEGInput() = default;
   int Init(const std::string &addr);
-  void RegisterHandler(std::function<void(AVPacket *)> handler);
   int GetHeight();
   int GetWidth();
   acldvppStreamFormat GetProfile();
   AVRational GetFramerate();
   void Run();
+  void Process() { Run(); }
+  void SetOutputQueue(ThreadSafeQueueWithCapacity<AVPacket>* queue);
 
 private:
   bool ReceiveSinglePacket();
@@ -34,7 +37,7 @@ private:
   AVBSFContext *bsfc{nullptr};
   const AVBitStreamFilter *bsf_filter{nullptr};
   AVCodecContext *decoder_context;
-  std::function<void(AVPacket *)> packet_handler;
+  ThreadSafeQueueWithCapacity<AVPacket>* output_queue{nullptr};
 
   int video_stream{-1};
 };

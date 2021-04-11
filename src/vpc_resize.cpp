@@ -1,5 +1,7 @@
 #include "vpc_resize.h"
 #include "util.h"
+#include "app_profiler.h"
+
 #include <string.h>
 
 VPCResizeEngine::VPCResizeEngine(aclrtStream stream) : stream(stream) {
@@ -27,7 +29,8 @@ void VPCResizeEngine::Destory() {
   // TODO: other clean up
 }
 
-aclError VPCResizeEngine::Resize(DeviceBufferPtr pdata) {
+VPCResizeEngine::OutTy VPCResizeEngine::Process(DeviceBufferPtr pdata) {
+  APP_PROFILE(VPCResizeEngine);
   acldvppPicDesc *input_desc = acldvppCreatePicDesc();
   acldvppPicDesc *output_desc = acldvppCreatePicDesc();
 
@@ -60,18 +63,11 @@ aclError VPCResizeEngine::Resize(DeviceBufferPtr pdata) {
   CHECK_ACL(acldvppVpcResizeAsync(channel_desc, input_desc, output_desc,
                                   resize_config, stream));
   CHECK_ACL(aclrtSynchronizeStream(stream));
-  if (buffer_handler) {
-    buffer_handler(resized_data, pdata);
-  }
 
   CHECK_ACL(acldvppDestroyPicDesc(input_desc));
   CHECK_ACL(acldvppDestroyPicDesc(output_desc));
 
-  return ACL_ERROR_NONE;
+  return {pdata, resized_data};
 }
 
 int VPCResizeEngine::GetOutputBufferSize() { return output_buffer_size; }
-
-void VPCResizeEngine::RegisterHandler(CallBack handler) {
-  buffer_handler = handler;
-}
