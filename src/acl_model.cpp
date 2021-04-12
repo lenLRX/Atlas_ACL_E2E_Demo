@@ -22,7 +22,7 @@ aclError ACLModel::Init(const char *model_path) {
   size_t model_input_num = aclmdlGetNumInputs(model_desc);
   size_t model_output_num = aclmdlGetNumOutputs(model_desc);
 
-   for (size_t i = 0; i < model_input_num; ++i) {
+  for (size_t i = 0; i < model_input_num; ++i) {
     size_t buffer_size = aclmdlGetInputSizeByIndex(model_desc, i);
     input_buffer_sizes.push_back(buffer_size);
   }
@@ -32,12 +32,11 @@ aclError ACLModel::Init(const char *model_path) {
     output_buffer_sizes.push_back(buffer_size);
   }
 
-
   loaded = true;
   return ACL_ERROR_NONE;
 }
 
-ACLModel::DevBufferVec ACLModel::Infer(const DevBufferVec& inputs) {
+ACLModel::DevBufferVec ACLModel::Infer(const DevBufferVec &inputs) {
   DevBufferVec result;
   aclmdlDataset *input_dataset = aclmdlCreateDataset();
   aclmdlDataset *output_dataset = aclmdlCreateDataset();
@@ -55,9 +54,10 @@ ACLModel::DevBufferVec ACLModel::Infer(const DevBufferVec& inputs) {
   for (size_t i = 0; i < model_output_num; ++i) {
     size_t buffer_size = aclmdlGetOutputSizeByIndex(model_desc, i);
     void *output_buffer;
-    CHECK_ACL(aclrtMalloc(&output_buffer, buffer_size, ACL_MEM_MALLOC_HUGE_FIRST));
-    auto dev_buffer_ptr = std::make_shared<DeviceBuffer>(output_buffer, buffer_size,
-                                                         DeviceBuffer::DevMemDeleter());
+    CHECK_ACL(
+        aclrtMalloc(&output_buffer, buffer_size, ACL_MEM_MALLOC_HUGE_FIRST));
+    auto dev_buffer_ptr = std::make_shared<DeviceBuffer>(
+        output_buffer, buffer_size, DeviceBuffer::DevMemDeleter());
     result.emplace_back(dev_buffer_ptr);
     aclDataBuffer *output_databuffer =
         aclCreateDataBuffer(output_buffer, buffer_size);

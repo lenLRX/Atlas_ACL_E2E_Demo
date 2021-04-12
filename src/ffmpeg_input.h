@@ -26,7 +26,8 @@ public:
   AVRational GetFramerate();
   void Run();
   void Process() { Run(); }
-  void SetOutputQueue(ThreadSafeQueueWithCapacity<AVPacket>* queue);
+  void ShutDown() { output_queue->ShutDown(); }
+  void SetOutputQueue(ThreadSafeQueueWithCapacity<AVPacket> *queue);
 
 private:
   bool ReceiveSinglePacket();
@@ -37,7 +38,7 @@ private:
   AVBSFContext *bsfc{nullptr};
   const AVBitStreamFilter *bsf_filter{nullptr};
   AVCodecContext *decoder_context;
-  ThreadSafeQueueWithCapacity<AVPacket>* output_queue{nullptr};
+  ThreadSafeQueueWithCapacity<AVPacket> *output_queue{nullptr};
 
   int video_stream{-1};
 };

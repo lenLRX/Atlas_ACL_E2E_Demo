@@ -19,7 +19,7 @@ static void DvppDecCallback(acldvppStreamDesc *input, acldvppPicDesc *output,
   uint32_t pic_size = acldvppGetPicDescSize(output);
 
   DeviceBufferPtr host_output_buffer = std::make_shared<DeviceBuffer>(
-    output_buffer, pic_size, DeviceBuffer::DvppMemDeleter());
+      output_buffer, pic_size, DeviceBuffer::DvppMemDeleter());
 
   ctx->decoder->GetOutputQueue()->push(host_output_buffer);
 
@@ -70,9 +70,7 @@ void DvppDecoder::Destory() {
   std::cout << "DvppDecoder::~DvppDecoder End" << std::endl;
 }
 
-void DvppDecoder::Process(AVPacket packet) {
-  SendFrame(&packet);
-}
+void DvppDecoder::Process(AVPacket packet) { SendFrame(&packet); }
 
 aclError DvppDecoder::SendFrame(AVPacket *packet) {
   std::cout << "DvppDecoder::SendFrame Enter" << std::endl;
@@ -86,16 +84,14 @@ aclError DvppDecoder::SendFrame(AVPacket *packet) {
   DeviceBufferPtr input_dev_buffer;
 
   if (!IsDeviceMode()) {
-    void* input_buffer;
+    void *input_buffer;
     CHECK_ACL(acldvppMalloc(&input_buffer, input_size));
-    CHECK_ACL(aclrtMemcpy(
-      input_buffer, input_size, frame_packet->data,
-      input_size, ACL_MEMCPY_HOST_TO_DEVICE));
+    CHECK_ACL(aclrtMemcpy(input_buffer, input_size, frame_packet->data,
+                          input_size, ACL_MEMCPY_HOST_TO_DEVICE));
     CHECK_ACL(acldvppSetStreamDescData(stream_desc, input_buffer));
     input_dev_buffer = std::make_shared<DeviceBuffer>(
-      input_buffer, input_size, DeviceBuffer::DvppMemDeleter());
-  }
-  else {
+        input_buffer, input_size, DeviceBuffer::DvppMemDeleter());
+  } else {
     CHECK_ACL(acldvppSetStreamDescData(stream_desc, frame_packet->data));
   }
 
@@ -107,7 +103,7 @@ aclError DvppDecoder::SendFrame(AVPacket *packet) {
 
   acldvppPicDesc *output = acldvppCreatePicDesc();
 
-  void* output_buffer;
+  void *output_buffer;
   CHECK_ACL(acldvppMalloc(&output_buffer, output_size));
   acldvppSetPicDescData(output, output_buffer);
   acldvppSetPicDescSize(output, output_size);
@@ -121,11 +117,12 @@ aclError DvppDecoder::SendFrame(AVPacket *packet) {
   return ACL_ERROR_NONE;
 }
 
-void DvppDecoder::SetOutputQueue(ThreadSafeQueueWithCapacity<DeviceBufferPtr>* queue) {
+void DvppDecoder::SetOutputQueue(
+    ThreadSafeQueueWithCapacity<DeviceBufferPtr> *queue) {
   output_queue = queue;
 }
 
-ThreadSafeQueueWithCapacity<DeviceBufferPtr>* DvppDecoder::GetOutputQueue() {
+ThreadSafeQueueWithCapacity<DeviceBufferPtr> *DvppDecoder::GetOutputQueue() {
   return output_queue;
 }
 

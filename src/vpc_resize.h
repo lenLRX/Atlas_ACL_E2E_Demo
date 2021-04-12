@@ -3,8 +3,8 @@
 #include "acl/acl.h"
 #include "acl/ops/acl_dvpp.h"
 
-#include "util.h"
 #include "acl_model.h"
+#include "util.h"
 
 #include <functional>
 #include <tuple>

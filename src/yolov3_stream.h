@@ -2,10 +2,10 @@
 #define __YOLOV3_STREAM_H__
 
 #include <nlohmann/json.hpp>
-#include <thread>
 #include <string>
-#include <vector>
+#include <thread>
 #include <tuple>
+#include <vector>
 
 #include "acl_model.h"
 #include "app_profiler.h"
@@ -19,8 +19,9 @@ public:
   // input type: <box info, resized image>
   using OutTy = std::tuple<ACLModel::DevBufferVec, DeviceBufferPtr>;
 
-  Yolov3Model(const std::string& path, aclrtStream stream);
+  Yolov3Model(const std::string &path, aclrtStream stream);
   OutTy Process(InTy bufferx2);
+
 private:
   ACLModel yolov3_model;
   aclrtStream model_stream;
@@ -36,4 +37,4 @@ public:
 
 std::thread MakeYolov3Stream(json config);
 
-#endif//__YOLOV3_STREAM_H__
+#endif //__YOLOV3_STREAM_H__

@@ -1,6 +1,6 @@
 #include "vpc_resize.h"
-#include "util.h"
 #include "app_profiler.h"
+#include "util.h"
 
 #include <string.h>
 
@@ -10,7 +10,8 @@ VPCResizeEngine::VPCResizeEngine(aclrtStream stream) : stream(stream) {
   acldvppSetResizeConfigInterpolation(resize_config, 0);
 }
 
-aclError VPCResizeEngine::Init(int input_h, int input_w, int output_h, int output_w) {
+aclError VPCResizeEngine::Init(int input_h, int input_w, int output_h,
+                               int output_w) {
   src_h = input_h;
   src_w = input_w;
   dst_h = output_h;
@@ -38,9 +39,7 @@ VPCResizeEngine::OutTy VPCResizeEngine::Process(DeviceBufferPtr pdata) {
   CHECK_ACL(acldvppMalloc(&dvpp_mem, output_buffer_size));
 
   DeviceBufferPtr resized_data = std::make_shared<DeviceBuffer>(
-    dvpp_mem, output_buffer_size,
-    DeviceBuffer::DvppMemDeleter()
-  );
+      dvpp_mem, output_buffer_size, DeviceBuffer::DvppMemDeleter());
 
   CHECK_ACL(acldvppSetPicDescData(input_desc, pdata->GetDevicePtr()));
   CHECK_ACL(

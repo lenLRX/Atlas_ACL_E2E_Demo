@@ -1,6 +1,6 @@
 #include "ffmpeg_input.h"
-#include "util.h"
 #include "app_profiler.h"
+#include "util.h"
 
 #include <chrono>
 #include <thread>
@@ -161,7 +161,8 @@ bool FFMPEGInput::ReceiveSinglePacket() {
 }
 
 bool FFMPEGInput::ReceivePacketWithBSF() {
-  auto perf_obj = AppProfileGuard("FFMPEGInput::ReceivePacketWithBSF" , __FILE__, __LINE__, false);
+  auto perf_obj = AppProfileGuard("FFMPEGInput::ReceivePacketWithBSF", __FILE__,
+                                  __LINE__, false);
   perf_obj.AddBeginRecord();
   AVPacket packet;
   av_init_packet(&packet);
@@ -199,6 +200,6 @@ bool FFMPEGInput::ReceivePacketWithBSF() {
   return true;
 }
 
-void FFMPEGInput::SetOutputQueue(ThreadSafeQueueWithCapacity<AVPacket>* queue) {
+void FFMPEGInput::SetOutputQueue(ThreadSafeQueueWithCapacity<AVPacket> *queue) {
   output_queue = queue;
 }

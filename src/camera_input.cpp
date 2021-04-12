@@ -8,18 +8,18 @@ extern "C" {
 
 static std::string StatusToStr(CameraStatus status) {
   switch (status) {
-    case CAMERA_STATUS_OPEN:
-      return "CAMERA_STATUS_OPEN";
-      break;
-    case CAMERA_STATUS_CLOSED:
-      return "CAMERA_STATUS_CLOSED";
-      break;
-    case CAMERA_NOT_EXISTS:
-      return "CAMERA_NOT_EXISTS";
-      break;
-    case CAMERA_STATUS_UNKOWN:
-      return "CAMERA_STATUS_UNKOWN";
-      break;
+  case CAMERA_STATUS_OPEN:
+    return "CAMERA_STATUS_OPEN";
+    break;
+  case CAMERA_STATUS_CLOSED:
+    return "CAMERA_STATUS_CLOSED";
+    break;
+  case CAMERA_NOT_EXISTS:
+    return "CAMERA_NOT_EXISTS";
+    break;
+  case CAMERA_STATUS_UNKOWN:
+    return "CAMERA_STATUS_UNKOWN";
+    break;
   }
   return "UNKNOWN";
 }
@@ -54,8 +54,8 @@ int CameraInput::Init(int id) {
   CameraStatus status = QueryCameraStatus(camera_id);
 
   if (status != CAMERA_STATUS_CLOSED) {
-    std::cerr << "Check CameraStatus Failed reason: "
-              << StatusToStr(status) << std::endl;
+    std::cerr << "Check CameraStatus Failed reason: " << StatusToStr(status)
+              << std::endl;
     return -1;
   }
 
@@ -69,8 +69,8 @@ int CameraInput::Init(int id) {
   fps = 20;
   ret = SetCameraProperty(camera_id, CAMERA_PROP_FPS, &fps);
   if (ret != LIBMEDIA_STATUS_OK) {
-    std::cerr << "SetCameraProperty CAMERA_PROP_FPS " << camera_id << " failed " << ret
-              << std::endl;
+    std::cerr << "SetCameraProperty CAMERA_PROP_FPS " << camera_id << " failed "
+              << ret << std::endl;
     return -1;
   }
 
@@ -80,22 +80,20 @@ int CameraInput::Init(int id) {
   width = resolution.width = 1280;
   ret = SetCameraProperty(camera_id, CAMERA_PROP_RESOLUTION, &resolution);
   if (ret != LIBMEDIA_STATUS_OK) {
-    std::cerr << "SetCameraProperty CAMERA_PROP_RESOLUTION " << camera_id << " failed " << ret
-              << std::endl;
+    std::cerr << "SetCameraProperty CAMERA_PROP_RESOLUTION " << camera_id
+              << " failed " << ret << std::endl;
     return -1;
   }
 
   cam_buffer_size = yuv420sp_size(height, width);
-
-  
 
   CameraCapMode cap_mode = CAMERA_CAP_ACTIVE;
 
   ret = SetCameraProperty(camera_id, CAMERA_PROP_CAP_MODE, &cap_mode);
 
   if (ret != LIBMEDIA_STATUS_OK) {
-    std::cerr << "SetCameraProperty CAMERA_PROP_CAP_MODE " << camera_id << " failed " << ret
-              << std::endl;
+    std::cerr << "SetCameraProperty CAMERA_PROP_CAP_MODE " << camera_id
+              << " failed " << ret << std::endl;
     return -1;
   }
   return 0;
@@ -103,17 +101,16 @@ int CameraInput::Init(int id) {
 
 void CameraInput::Run() {
   while (true) {
-    uint8_t* camera_buffer = (uint8_t *)malloc(cam_buffer_size);
+    uint8_t *camera_buffer = (uint8_t *)malloc(cam_buffer_size);
     int ret = ReadFrameFromCamera(camera_id, camera_buffer, &cam_buffer_size);
     if (ret != LIBMEDIA_STATUS_OK) {
-      std::cerr << "ReadFrameFromCamera failed, camera id: " << camera_id << std::endl;
+      std::cerr << "ReadFrameFromCamera failed, camera id: " << camera_id
+                << std::endl;
       free(camera_buffer);
       return;
     }
     auto dev_cam_buffer = std::shared_ptr<DeviceBufferPtr>(
-      camera_buffer, cam_buffer_size, [](void* mem) {
-        free(mem);
-      });
+        camera_buffer, cam_buffer_size, [](void *mem) { free(mem); });
     buffer_handler(camera_buffer);
   }
 }
@@ -130,7 +127,8 @@ void CameraInput::Run() {
   throw std::runtime_error("Only Atlas200DK support camera!");
 }
 
-void CameraInput::RegisterHandler(std::function<void(DeviceBufferPtr)> handler) {
+void CameraInput::RegisterHandler(
+    std::function<void(DeviceBufferPtr)> handler) {
   buffer_handler = handler;
 }
 

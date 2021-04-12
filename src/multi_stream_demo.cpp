@@ -24,15 +24,15 @@ const static int yolov3_model_size = 416;
 
 void DetectAndDraw(ACLModel *model, DeviceBufferPtr buffer) {
   size_t img_info_size = model->GetInputBufferSizes()[1];
-  void* device_img_info;
-  CHECK_ACL(aclrtMalloc(&device_img_info, img_info_size, ACL_MEM_MALLOC_HUGE_FIRST));
+  void *device_img_info;
+  CHECK_ACL(
+      aclrtMalloc(&device_img_info, img_info_size, ACL_MEM_MALLOC_HUGE_FIRST));
 
   float *host_img_info;
   if (IsDeviceMode()) {
     host_img_info = (float *)device_img_info;
-  }
-  else {
-    CHECK_ACL(aclrtMallocHost(((void**)&host_img_info), img_info_size));
+  } else {
+    CHECK_ACL(aclrtMallocHost(((void **)&host_img_info), img_info_size));
   }
 
   host_img_info[0] = yolov3_model_size;
@@ -41,17 +41,15 @@ void DetectAndDraw(ACLModel *model, DeviceBufferPtr buffer) {
   host_img_info[3] = yolov3_model_size; // scale W
 
   if (!IsDeviceMode()) {
-    CHECK_ACL(aclrtMemcpy(device_img_info, img_info_size, host_img_info, img_info_size, ACL_MEMCPY_HOST_TO_DEVICE));
+    CHECK_ACL(aclrtMemcpy(device_img_info, img_info_size, host_img_info,
+                          img_info_size, ACL_MEMCPY_HOST_TO_DEVICE));
   }
 
   DeviceBufferPtr img_info_buffer;
   img_info_buffer = std::make_shared<DeviceBuffer>(
       device_img_info, img_info_size, DeviceBuffer::DevMemDeleter());
 
-
   auto output_buffers = model->Infer({buffer, img_info_buffer});
-
-
 
   int post_nms_num = 1024;
   float *box_info = (float *)output_buffers[0]->GetHostPtr();
@@ -60,7 +58,8 @@ void DetectAndDraw(ACLModel *model, DeviceBufferPtr buffer) {
   std::cout << "result box num:" << box_out_num << std::endl;
   // PERF_TIMER();
 
-  YUV420SPImage img((uint8_t*)buffer->GetHostPtr(), yolov3_model_size, yolov3_model_size);
+  YUV420SPImage img((uint8_t *)buffer->GetHostPtr(), yolov3_model_size,
+                    yolov3_model_size);
   YUVColor box_color(0, 0, 0xff); // Red?
 
   for (int i = 0; i < box_out_num; ++i) {
@@ -125,7 +124,8 @@ void StreamThread(std::string input_addr, std::string output_addr) {
     camera_input.RegisterHandler(resize_handler);
     width = camera_input.GetWidth();
     height = camera_input.GetHeight();
-    ffmpeg_output.Init(output_addr, yolov3_model_size, yolov3_model_size, camera_input.GetFPS());
+    ffmpeg_output.Init(output_addr, yolov3_model_size, yolov3_model_size,
+                       camera_input.GetFPS());
   }
 
   // DvppEncoder encoder;
@@ -134,11 +134,12 @@ void StreamThread(std::string input_addr, std::string output_addr) {
 
   resize_engine.Init(height, width, yolov3_model_size, yolov3_model_size);
 
-  resize_engine.RegisterHandler([&](DeviceBufferPtr buffer, DeviceBufferPtr raw_buffer) {
-    DetectAndDraw(&model, buffer);
-    // encoder.SendFrame(buffer);
-    ffmpeg_output.SendFrame((const uint8_t*)buffer->GetHostPtr());
-  });
+  resize_engine.RegisterHandler(
+      [&](DeviceBufferPtr buffer, DeviceBufferPtr raw_buffer) {
+        DetectAndDraw(&model, buffer);
+        // encoder.SendFrame(buffer);
+        ffmpeg_output.SendFrame((const uint8_t *)buffer->GetHostPtr());
+      });
 
   if (camera_id < 0) {
     ffmpeg_input.RegisterHandler(

@@ -10,12 +10,11 @@ extern "C" {
 #include "acl/ops/acl_dvpp.h"
 #include "acl_cb_thread.h"
 
-#include "util.h"
 #include "acl_model.h"
+#include "util.h"
 
 #include <functional>
 #include <memory>
-
 
 class DvppDecoder {
 public:
@@ -26,8 +25,9 @@ public:
                 acldvppStreamFormat profile = H264_HIGH_LEVEL);
   aclError SendFrame(AVPacket *packet);
   void Process(AVPacket packet);
-  void SetOutputQueue(ThreadSafeQueueWithCapacity<DeviceBufferPtr>* queue);
-  ThreadSafeQueueWithCapacity<DeviceBufferPtr>* GetOutputQueue();
+  void ShutDown() { output_queue->ShutDown(); }
+  void SetOutputQueue(ThreadSafeQueueWithCapacity<DeviceBufferPtr> *queue);
+  ThreadSafeQueueWithCapacity<DeviceBufferPtr> *GetOutputQueue();
   void SetDeviceCtx(aclrtContext *ctx);
   aclrtContext *GetDeviceCtx();
 
@@ -44,7 +44,7 @@ private:
   aclvdecChannelDesc *channel_desc;
   aclvdecFrameConfig *frame_config;
   aclrtContext *dev_ctx;
-  ThreadSafeQueueWithCapacity<DeviceBufferPtr>* output_queue{nullptr};
+  ThreadSafeQueueWithCapacity<DeviceBufferPtr> *output_queue{nullptr};
 };
 
 #endif // __DVPP_DECODER_H__

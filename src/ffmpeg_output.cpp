@@ -1,9 +1,9 @@
 #include "ffmpeg_output.h"
-#include "util.h"
 #include "app_profiler.h"
+#include "util.h"
 
-#include <iostream>
 #include <fstream>
+#include <iostream>
 #include <thread>
 
 /*
@@ -34,8 +34,9 @@ int FFMPEGOutput::Init(std::string name, int img_h, int img_w, int frame_rate,
 int FFMPEGOutput::Init(std::string name, int img_h, int img_w,
                        AVRational frame_rate, int pic_fmt) {
   last_sent_tp = std::chrono::steady_clock::now();
-  interval = Duration((double)frame_rate.den/frame_rate.num);
-  std::cout << "FFMPEGOutput::Init frame send interval: " << interval.count() << std::endl;
+  interval = Duration((double)frame_rate.den / frame_rate.num);
+  std::cout << "FFMPEGOutput::Init frame send interval: " << interval.count()
+            << std::endl;
   stream_name = name;
   const char *output = stream_name.c_str();
   const char *profile = "high444";
@@ -152,7 +153,7 @@ int FFMPEGOutput::Init(std::string name, int img_h, int img_w,
 bool FFMPEGOutput::IsValid() { return valid; }
 
 void FFMPEGOutput::Process(DeviceBufferPtr buffer) {
-  SendFrame((const uint8_t*)buffer->GetHostPtr());
+  SendFrame((const uint8_t *)buffer->GetHostPtr());
 }
 
 void FFMPEGOutput::SendFrame(const uint8_t *pdata) {

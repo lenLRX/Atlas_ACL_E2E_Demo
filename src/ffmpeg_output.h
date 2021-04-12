@@ -8,14 +8,13 @@ extern "C" {
 #include "libavutil/imgutils.h"
 }
 
-#include <string>
 #include <chrono>
+#include <string>
 
 #include "acl_model.h"
 
 using Duration = std::chrono::duration<double, std::ratio<1>>;
 using TimePoint = std::chrono::time_point<std::chrono::steady_clock>;
-
 
 class FFMPEGOutput {
 public:
@@ -27,6 +26,7 @@ public:
            int pic_fmt = AV_PIX_FMT_NV12);
   bool IsValid();
 
+  void ShutDown() {}
   void Process(DeviceBufferPtr buffer);
 
   void SendFrame(const uint8_t *pdata);
