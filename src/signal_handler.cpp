@@ -1,14 +1,18 @@
 #include <signal.h>
 #include <unistd.h>
 
+#include <iostream>
+
 #include "signal_handler.h"
 
 void app_signal_callback(int signum) {
-  auto callbacks = SingalHandler::GetInstancce().GetCallBacks();
+  auto &handler = SingalHandler::GetInstancce();
+  std::lock_guard<std::mutex> guard(SingalHandler::GetMtx());
+  auto &callbacks = SingalHandler::GetCallBacks();
   for (auto &cb : callbacks) {
     cb();
   }
-  _exit(0); // signal safe function
+  callbacks.clear();
 }
 
 SingalHandler &SingalHandler::GetInstancce() {
@@ -19,9 +23,15 @@ SingalHandler &SingalHandler::GetInstancce() {
 void SingalHandler::RegisterSignal() { signal(SIGINT, app_signal_callback); }
 
 void SingalHandler::Register(std::function<void(void)> callback) {
-  SingalHandler::GetInstancce().callbacks.push_back(callback);
+  auto &handler = SingalHandler::GetInstancce();
+  std::lock_guard<std::mutex> guard(handler.cb_mtx);
+  handler.callbacks.push_back(callback);
 }
 
-SingalHandler::CbVec SingalHandler::GetCallBacks() {
+SingalHandler::CbVec &SingalHandler::GetCallBacks() {
   return SingalHandler::GetInstancce().callbacks;
+}
+
+std::mutex &SingalHandler::GetMtx() {
+  return SingalHandler::GetInstancce().cb_mtx;
 }

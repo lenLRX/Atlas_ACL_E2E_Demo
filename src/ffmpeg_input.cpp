@@ -128,16 +128,18 @@ void FFMPEGInput::Run() {
   packet.size = av_cc->extradata_size;
   output_queue->push(packet);
   if (need_bsf) {
-    while (ReceivePacketWithBSF())
+    while (running.load() && ReceivePacketWithBSF())
       ;
   } else {
-    while (ReceiveSinglePacket())
+    while (running.load() && ReceiveSinglePacket())
       ;
   }
 }
 
 bool FFMPEGInput::ReceiveSinglePacket() {
-  APP_PROFILE(FFMPEGInput::ReceiveSinglePacket);
+  auto perf_obj = AppProfileGuard("FFMPEGInput::ReceiveSinglePacket", __FILE__,
+                                  __LINE__, false);
+  perf_obj.AddBeginRecord();
   AVPacket packet;
   av_init_packet(&packet);
   packet.data = nullptr;
@@ -152,11 +154,14 @@ bool FFMPEGInput::ReceiveSinglePacket() {
               << av_make_error_string(err_buf, AV_ERROR_MAX_STRING_SIZE, ret)
               << std::endl;
     av_packet_unref(&packet);
+    perf_obj.AddEndRecord();
     return false;
   }
   if (packet.stream_index == video_stream) {
     output_queue->push(packet);
   }
+  av_packet_unref(&packet);
+  perf_obj.AddEndRecord();
   return true;
 }
 

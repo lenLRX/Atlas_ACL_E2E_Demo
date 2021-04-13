@@ -46,7 +46,6 @@ void AppProfiler::Start() {
   profiler.start_tp = std::chrono::steady_clock::now();
   profiler.active = true;
   profiler.worker_thread = std::move(std::thread(AppProfiler::ProfilerThread));
-
   SingalHandler::Register(AppProfiler::ShutDown);
 }
 

@@ -5,6 +5,7 @@
 #include <string>
 
 #include "app_profiler.h"
+#include "signal_handler.h"
 #include "util.h"
 #include "yolov3_stream.h"
 
@@ -24,7 +25,7 @@ std::vector<std::thread> CreateStreamByConfig(const json &jconfig) {
 }
 
 int main(int argc, char **argv) {
-  signal(SIGINT, exit);
+  SingalHandler::RegisterSignal();
   CHECK_ACL(aclInit(nullptr));
   if (argc != 3) {
     std::cerr << "invalid arguments!\n"

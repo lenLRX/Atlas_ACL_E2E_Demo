@@ -15,6 +15,7 @@
 
 #include "acl_cb_thread.h"
 #include "app_profiler.h"
+#include "signal_handler.h"
 #include "task_node.h"
 #include "yolov3_stream.h"
 
@@ -260,6 +261,7 @@ void Yolov3StreamThread(json config) {
     TaskNode<FFMPEGInput, void, void> ffmpeg_input_node(
         &ffmpeg_input, "FFMPEGInput", input_addr);
     ffmpeg_input.SetOutputQueue(&decoder_input_queue);
+    SingalHandler::Register([&]() { ffmpeg_input.Stop(); });
     ffmpeg_input_node.Start(ctx);
     ffmpeg_input_node.Join();
   } else {

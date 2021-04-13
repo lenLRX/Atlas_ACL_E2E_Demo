@@ -10,6 +10,7 @@ extern "C" {
 #include "acl/acl.h"
 #include "acl/ops/acl_dvpp.h"
 
+#include <atomic>
 #include <functional>
 #include <iostream>
 #include <string>
@@ -27,6 +28,7 @@ public:
   void Run();
   void Process() { Run(); }
   void ShutDown() { output_queue->ShutDown(); }
+  void Stop() { running = false; }
   void SetOutputQueue(ThreadSafeQueueWithCapacity<AVPacket> *queue);
 
 private:
@@ -39,7 +41,7 @@ private:
   const AVBitStreamFilter *bsf_filter{nullptr};
   AVCodecContext *decoder_context;
   ThreadSafeQueueWithCapacity<AVPacket> *output_queue{nullptr};
-
+  std::atomic<bool> running{true};
   int video_stream{-1};
 };
 
