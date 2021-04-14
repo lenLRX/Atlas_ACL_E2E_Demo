@@ -39,14 +39,14 @@ public:
 
 private:
   void AddRecord(const char *name, const char *fname, int lineno,
-                 const std::string &type, const std::string &tname,
-                 const std::string &sname) const;
+                 const std::string &tname, const std::string &sname) const;
   std::string record_name;
   const char *record_file_name;
   int record_file_lineno;
   std::string thread_name;
   std::string stream_name;
   bool raii;
+  std::chrono::time_point<std::chrono::steady_clock, std::chrono::microseconds> start_us;
 };
 
 #define APP_PROFILE(name)                                                      \

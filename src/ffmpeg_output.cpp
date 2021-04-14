@@ -158,8 +158,6 @@ void FFMPEGOutput::Process(DeviceBufferPtr buffer) {
 
 void FFMPEGOutput::SendFrame(const uint8_t *pdata) {
   APP_PROFILE(FFMPEGOutput::SendFrame);
-  // std::cerr << "[FFMPEGOutput::SendFrame] Start" << std::endl;
-  PERF_TIMER();
   int ret = 0;
   av_image_fill_arrays(video_frame->data, video_frame->linesize, pdata,
                        video_avcc->pix_fmt, video_avcc->width,
@@ -247,7 +245,6 @@ void FFMPEGOutput::SendEncodedFrame(void *pdata, int size) {
   av_packet_unref(&pkt);
 
   video_frame->pts += av_rescale_q(1, video_avcc->time_base, avs->time_base);
-  std::cerr << "[FFMPEGOutput::SendFrame] Sent Done" << std::endl;
 }
 
 void FFMPEGOutput::Close() {

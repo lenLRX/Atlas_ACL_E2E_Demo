@@ -4,11 +4,16 @@
 #include "acl/acl.h"
 #include <pthread.h>
 #include <thread>
+#include <string>
+
+#include "app_profiler.h"
 
 class AclCallBackThread {
 public:
-  AclCallBackThread() {
-    worker_thread = std::thread([this]() {
+  AclCallBackThread(const std::string& sname, const std::string& tname) {
+    worker_thread = std::thread([sname, tname, this]() {
+      SetStreamName(sname);
+      SetThreadName(tname);
       // Notice: create context for this thread
       int deviceId = 0;
       aclrtContext context = nullptr;

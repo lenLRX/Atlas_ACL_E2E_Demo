@@ -26,7 +26,7 @@ VPCResizeEngine::~VPCResizeEngine() {}
 
 void VPCResizeEngine::Destory() {
   acldvppDestroyChannel(channel_desc);
-  std::cout << "VPCResizeEngine::~VPCResizeEngine End" << std::endl;
+  //std::cout << "VPCResizeEngine::~VPCResizeEngine End" << std::endl;
   // TODO: other clean up
 }
 

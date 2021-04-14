@@ -16,7 +16,7 @@ class Yolov3Model {
 public:
   // input type: <raw image, resized image>
   using InTy = std::tuple<DeviceBufferPtr, DeviceBufferPtr>;
-  // input type: <box info, resized image>
+  // input type: <box info, raw image>
   using OutTy = std::tuple<ACLModel::DevBufferVec, DeviceBufferPtr>;
 
   Yolov3Model(const std::string &path, aclrtStream stream);
@@ -31,8 +31,13 @@ class Yolov3PostProcess {
 public:
   using InTy = std::tuple<ACLModel::DevBufferVec, DeviceBufferPtr>;
   using OutTy = DeviceBufferPtr;
-  Yolov3PostProcess() = default;
+  Yolov3PostProcess(int width, int height);
   OutTy Process(InTy input);
+private:
+  int width;
+  int height;
+  float h_ratio;
+  float w_ratio;
 };
 
 std::thread MakeYolov3Stream(json config);

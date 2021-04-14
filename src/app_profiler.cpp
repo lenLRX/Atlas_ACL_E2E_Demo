@@ -47,6 +47,7 @@ void AppProfiler::Start() {
   profiler.active = true;
   profiler.worker_thread = std::move(std::thread(AppProfiler::ProfilerThread));
   SingalHandler::Register(AppProfiler::ShutDown);
+  std::atexit(AppProfiler::ShutDown);
 }
 
 void AppProfiler::SetLogDir(const std::string &logdir) {
@@ -95,27 +96,31 @@ AppProfileGuard::~AppProfileGuard() {
 }
 
 void AppProfileGuard::AddBeginRecord() {
-  AddRecord(record_name.c_str(), record_file_name, record_file_lineno, "B",
-            thread_name, stream_name);
+  auto current_tp = std::chrono::steady_clock::now();
+  start_us = std::chrono::time_point_cast<std::chrono::microseconds>(
+      current_tp);
 }
 
 void AppProfileGuard::AddEndRecord() {
-  AddRecord(record_name.c_str(), record_file_name, record_file_lineno, "E",
+  AddRecord(record_name.c_str(), record_file_name, record_file_lineno,
             thread_name, stream_name);
 }
 
 void AppProfileGuard::AddRecord(const char *name, const char *fname, int lineno,
-                                const std::string &ph, const std::string &tname,
+                                const std::string &tname,
                                 const std::string &sname) const {
   auto current_tp = std::chrono::steady_clock::now();
   auto us_tp =
       std::chrono::time_point_cast<std::chrono::microseconds>(current_tp);
+  auto start_count = start_us.time_since_epoch().count();
+  auto end_count = us_tp.time_since_epoch().count();
 
   json record{{"name", name},
-              {"ph", ph},
+              {"ph", "X"},
               {"tid", tname},
               {"pid", sname},
-              {"ts", us_tp.time_since_epoch().count()},
+              {"ts", start_count},
+              {"dur", end_count - start_count},
               {"args", {{"file", fname}, {"lineno", lineno}}}};
 
   AppProfiler::RecordEvent(record);

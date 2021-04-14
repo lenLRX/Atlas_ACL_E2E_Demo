@@ -32,13 +32,14 @@ const char *FreeTypeErrorMessage(FT_Error err) {
 #include <iostream>
 #include <locale>
 #include <vector>
+#include <mutex>
 
 #include "drawing.h"
 
 class GlpyhContext {
 public:
   static GlpyhContext &GetInstance() {
-    static GlpyhContext ctx;
+    static thread_local GlpyhContext ctx;
     return ctx;
   }
 
@@ -101,6 +102,7 @@ private:
   int font_size{20};
   FT_Library library;
   std::vector<FT_Face> faces;
+  std::mutex mtx;
 };
 
 // TODO: cache glyphs
