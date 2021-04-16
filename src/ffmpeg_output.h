@@ -10,6 +10,7 @@ extern "C" {
 
 #include <chrono>
 #include <string>
+#include <tuple>
 
 #include "acl_model.h"
 
@@ -28,6 +29,9 @@ public:
 
   void ShutDown() {}
   void Process(DeviceBufferPtr buffer);
+  void Process(std::tuple<void*, uint32_t> buffer);
+
+  void Wait4Stream();
 
   void SendFrame(const uint8_t *pdata);
   void SendEncodedFrame(void *pdata, int size);

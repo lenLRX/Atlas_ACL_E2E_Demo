@@ -156,14 +156,8 @@ void FFMPEGOutput::Process(DeviceBufferPtr buffer) {
   SendFrame((const uint8_t *)buffer->GetHostPtr());
 }
 
-void FFMPEGOutput::SendFrame(const uint8_t *pdata) {
-  APP_PROFILE(FFMPEGOutput::SendFrame);
-  int ret = 0;
-  av_image_fill_arrays(video_frame->data, video_frame->linesize, pdata,
-                       video_avcc->pix_fmt, video_avcc->width,
-                       video_avcc->height, 1);
-
-  if (!output_is_file) {
+void FFMPEGOutput::Wait4Stream() {
+    if (!output_is_file) {
     // if output is not file, e.g. RTSP or RTMP
     // we must not send too fast
     auto now = std::chrono::steady_clock::now();
@@ -176,6 +170,15 @@ void FFMPEGOutput::SendFrame(const uint8_t *pdata) {
     }
     last_sent_tp = std::chrono::steady_clock::now();
   }
+}
+
+void FFMPEGOutput::SendFrame(const uint8_t *pdata) {
+  Wait4Stream();
+  APP_PROFILE(FFMPEGOutput::SendFrame);
+  int ret = 0;
+  av_image_fill_arrays(video_frame->data, video_frame->linesize, pdata,
+                       video_avcc->pix_fmt, video_avcc->width,
+                       video_avcc->height, 1);
 
   ret = avcodec_send_frame(video_avcc, video_frame);
 
@@ -216,7 +219,17 @@ static void dontfree(void *opaque, uint8_t *data) {
   // tell ffmpeg dont free data
 }
 
+static void custom_free(void *opaque, uint8_t *data) {
+  free(data);
+}
+
+void FFMPEGOutput::Process(std::tuple<void*, uint32_t> buffer) {
+  SendEncodedFrame(std::get<0>(buffer), std::get<1>(buffer));
+}
+
 void FFMPEGOutput::SendEncodedFrame(void *pdata, int size) {
+  Wait4Stream();
+  APP_PROFILE(FFMPEGOutput::SendEncodedFrame);
   int ret = 0;
   AVPacket pkt = {0};
   av_init_packet(&pkt);
@@ -227,7 +240,7 @@ void FFMPEGOutput::SendEncodedFrame(void *pdata, int size) {
   // av_packet_from_data(&pkt, (uint8_t*)pdata, size);
 
   pkt.buf = av_buffer_create(
-      (uint8_t *)pdata, size + AV_INPUT_BUFFER_PADDING_SIZE, dontfree, NULL, 0);
+      (uint8_t *)pdata, size + AV_INPUT_BUFFER_PADDING_SIZE, custom_free, NULL, 0);
 
   pkt.data = (uint8_t *)pdata;
   pkt.size = size;

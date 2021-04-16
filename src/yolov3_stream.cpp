@@ -103,9 +103,14 @@ void Yolov3StreamThread(json config) {
   std::string input_addr = config.at("src");
   std::string output_addr = config.at("dst");
   std::string model_path = config.at("model_path");
+  bool hardware_enc = false;
+  if (config.count("hw_encoder")) {
+    hardware_enc = config.at("hw_encoder");
+  }
+  
 
   CHECK_ACL(aclrtSetDevice(0));
-  AclCallBackThread cb_thread(input_addr, "DVPP_VDEC");
+  AclCallBackThread cb_thread(input_addr, "DVPP");
 
   aclrtContext ctx;
   CHECK_ACL(aclrtCreateContext(&ctx, 0));
@@ -153,6 +158,7 @@ void Yolov3StreamThread(json config) {
   aclrtStream resize_stream;
   CHECK_ACL(aclrtCreateStream(&resize_stream));
   VPCResizeEngine resize_engine(resize_stream);
+  resize_engine.Init(height, width, yolov3_model_size, yolov3_model_size);
 
   TaskNode<VPCResizeEngine, DeviceBufferPtr, buf_tup_t> resize_engine_node(
       &resize_engine, "VPCResizeEngine", input_addr);
@@ -195,17 +201,28 @@ void Yolov3StreamThread(json config) {
     ffmpeg_output.Init(output_addr, height, width,
                        camera_input.GetFPS());
   }
-  TaskNode<FFMPEGOutput, DeviceBufferPtr, void> ffmpeg_output_node(
-      &ffmpeg_output, "FFMPEGOutput", input_addr);
 
-  ffmpeg_output_node.SetInputQueue(&yolov3_post_output_queue);
-  ffmpeg_output_node.Start(ctx);
+  TaskNode<FFMPEGOutput, DeviceBufferPtr, void> ffmpeg_sw_output_node(
+      &ffmpeg_output, "FFMPEGSoftwareOutput", input_addr);
+  
+  TaskNode<FFMPEGOutput, DvppEncoder::OutTy, void> ffmpeg_hw_output_node(
+      &ffmpeg_output, "FFMPEGHardwareOutput", input_addr);
 
-  // DvppEncoder encoder;
-  // encoder.Init(cb_thread.GetPid(), yolov3_model_size, yolov3_model_size,
-  // &ffmpeg_output);
-
-  resize_engine.Init(height, width, yolov3_model_size, yolov3_model_size);
+  DvppEncoder encoder;
+  TaskNode<DvppEncoder, DeviceBufferPtr, void> encoder_node(&encoder, "DvppEncoder", input_addr);
+  ThreadSafeQueueWithCapacity<DvppEncoder::OutTy> encoder_output_queue(queue_size);
+  if (hardware_enc) {
+    encoder.Init(cb_thread.GetPid(), height, width);
+    encoder.SetOutputQueue(&encoder_output_queue);
+    encoder_node.SetInputQueue(&yolov3_post_output_queue);
+    ffmpeg_hw_output_node.SetInputQueue(&encoder_output_queue);
+    ffmpeg_hw_output_node.Start(ctx);
+    encoder_node.Start(ctx);
+  }
+  else {
+    ffmpeg_sw_output_node.SetInputQueue(&yolov3_post_output_queue);
+    ffmpeg_sw_output_node.Start(ctx);
+  }
 
   if (camera_id < 0) {
     TaskNode<FFMPEGInput, void, void> ffmpeg_input_node(
@@ -221,7 +238,15 @@ void Yolov3StreamThread(json config) {
   resize_engine_node.Join();
   yolov3_model_node.Join();
   post_process_node.Join();
-  ffmpeg_output_node.Join();
+  if (hardware_enc) {
+    encoder_node.Join();
+    encoder.Destory();
+    ffmpeg_hw_output_node.Join();
+  }
+  else {
+    ffmpeg_sw_output_node.Join();
+  }
+
   if (camera_id < 0) {
     decoder_node.Join();
     decoder.Destory();
@@ -229,10 +254,8 @@ void Yolov3StreamThread(json config) {
 
   resize_engine.Destory();
   ffmpeg_output.Close();
-  // encoder.Destory();
 
-  // CHECK_ACL(aclrtUnSubscribeReport(cb_thread.GetPid(), stream));
-  // cb_thread.Join();
+  CHECK_ACL(aclrtUnSubscribeReport(cb_thread.GetPid(), stream));
   std::cout << "End of stream input: " << input_addr << std::endl;
 }
 

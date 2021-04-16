@@ -159,8 +159,11 @@ bool FFMPEGInput::ReceiveSinglePacket() {
   }
   if (packet.stream_index == video_stream) {
     output_queue->push(packet);
+    // packet unrefed by consumer
   }
-  av_packet_unref(&packet);
+  else {
+    av_packet_unref(&packet);
+  }
   perf_obj.AddEndRecord();
   return true;
 }

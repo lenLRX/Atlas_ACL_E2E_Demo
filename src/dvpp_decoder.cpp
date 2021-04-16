@@ -70,7 +70,10 @@ void DvppDecoder::Destory() {
   //std::cout << "DvppDecoder::~DvppDecoder End" << std::endl;
 }
 
-void DvppDecoder::Process(AVPacket packet) { SendFrame(&packet); }
+void DvppDecoder::Process(AVPacket packet) { 
+  SendFrame(&packet); 
+  av_packet_unref(&packet);
+}
 
 aclError DvppDecoder::SendFrame(AVPacket *packet) {
   AVPacket *frame_packet = new AVPacket();
