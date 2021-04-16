@@ -61,17 +61,17 @@ int DvppDecoder::GetChannelId() {
 DvppDecoder::~DvppDecoder() {}
 
 void DvppDecoder::Destory() {
-  //std::cout << "DvppDecoder::~DvppDecoder Start" << std::endl;
+  // std::cout << "DvppDecoder::~DvppDecoder Start" << std::endl;
 
   aclvdecDestroyChannel(channel_desc);
-  //std::cout << "DvppDecoder::~DvppDecoder DestroyChannel Done" << std::endl;
+  // std::cout << "DvppDecoder::~DvppDecoder DestroyChannel Done" << std::endl;
   // aclvdecDestroyChannelDesc(channel_desc);
   // aclvdecDestroyFrameConfig(frame_config);
-  //std::cout << "DvppDecoder::~DvppDecoder End" << std::endl;
+  // std::cout << "DvppDecoder::~DvppDecoder End" << std::endl;
 }
 
-void DvppDecoder::Process(AVPacket packet) { 
-  SendFrame(&packet); 
+void DvppDecoder::Process(AVPacket packet) {
+  SendFrame(&packet);
   av_packet_unref(&packet);
 }
 

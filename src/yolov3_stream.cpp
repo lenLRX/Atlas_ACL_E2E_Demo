@@ -64,7 +64,7 @@ Yolov3Model::OutTy Yolov3Model::Process(Yolov3Model::InTy bufferx2) {
 }
 
 Yolov3PostProcess::Yolov3PostProcess(int width, int height)
-: width(width), height(height) {
+    : width(width), height(height) {
   h_ratio = height / (float)yolov3_model_size;
   w_ratio = width / (float)yolov3_model_size;
 }
@@ -80,12 +80,12 @@ Yolov3PostProcess::OutTy Yolov3PostProcess::Process(InTy input) {
 
   // std::cout << "result box num:" << box_out_num << std::endl;
 
-  YUV420SPImage img((uint8_t *)image_buffer->GetHostPtr(), 
-                    height, width);
+  YUV420SPImage img((uint8_t *)image_buffer->GetHostPtr(), height, width);
   YUVColor box_color(0, 0, 0xff); // Red?
 
   for (int i = 0; i < box_out_num; ++i) {
-    float x1 = box_info[box_out_num * 0 + i] * w_ratio;;
+    float x1 = box_info[box_out_num * 0 + i] * w_ratio;
+    ;
     float y1 = box_info[box_out_num * 1 + i] * h_ratio;
     float x2 = box_info[box_out_num * 2 + i] * w_ratio;
     float y2 = box_info[box_out_num * 3 + i] * h_ratio;
@@ -107,7 +107,6 @@ void Yolov3StreamThread(json config) {
   if (config.count("hw_encoder")) {
     hardware_enc = config.at("hw_encoder");
   }
-  
 
   CHECK_ACL(aclrtSetDevice(0));
   AclCallBackThread cb_thread(input_addr, "DVPP");
@@ -154,7 +153,6 @@ void Yolov3StreamThread(json config) {
     decoder.SetDeviceCtx(&ctx);
   }
 
-
   aclrtStream resize_stream;
   CHECK_ACL(aclrtCreateStream(&resize_stream));
   VPCResizeEngine resize_engine(resize_stream);
@@ -194,23 +192,22 @@ void Yolov3StreamThread(json config) {
 
   FFMPEGOutput ffmpeg_output;
   if (camera_id < 0) {
-    ffmpeg_output.Init(output_addr, height, width,
-                       ffmpeg_input.GetFramerate());
-  }
-  else {
-    ffmpeg_output.Init(output_addr, height, width,
-                       camera_input.GetFPS());
+    ffmpeg_output.Init(output_addr, height, width, ffmpeg_input.GetFramerate());
+  } else {
+    ffmpeg_output.Init(output_addr, height, width, camera_input.GetFPS());
   }
 
   TaskNode<FFMPEGOutput, DeviceBufferPtr, void> ffmpeg_sw_output_node(
       &ffmpeg_output, "FFMPEGSoftwareOutput", input_addr);
-  
+
   TaskNode<FFMPEGOutput, DvppEncoder::OutTy, void> ffmpeg_hw_output_node(
       &ffmpeg_output, "FFMPEGHardwareOutput", input_addr);
 
   DvppEncoder encoder;
-  TaskNode<DvppEncoder, DeviceBufferPtr, void> encoder_node(&encoder, "DvppEncoder", input_addr);
-  ThreadSafeQueueWithCapacity<DvppEncoder::OutTy> encoder_output_queue(queue_size);
+  TaskNode<DvppEncoder, DeviceBufferPtr, void> encoder_node(
+      &encoder, "DvppEncoder", input_addr);
+  ThreadSafeQueueWithCapacity<DvppEncoder::OutTy> encoder_output_queue(
+      queue_size);
   if (hardware_enc) {
     encoder.Init(cb_thread.GetPid(), height, width);
     encoder.SetOutputQueue(&encoder_output_queue);
@@ -218,8 +215,7 @@ void Yolov3StreamThread(json config) {
     ffmpeg_hw_output_node.SetInputQueue(&encoder_output_queue);
     ffmpeg_hw_output_node.Start(ctx);
     encoder_node.Start(ctx);
-  }
-  else {
+  } else {
     ffmpeg_sw_output_node.SetInputQueue(&yolov3_post_output_queue);
     ffmpeg_sw_output_node.Start(ctx);
   }
@@ -242,8 +238,7 @@ void Yolov3StreamThread(json config) {
     encoder_node.Join();
     encoder.Destory();
     ffmpeg_hw_output_node.Join();
-  }
-  else {
+  } else {
     ffmpeg_sw_output_node.Join();
   }
 

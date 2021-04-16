@@ -3,14 +3,14 @@
 
 #include "acl/acl.h"
 #include <pthread.h>
-#include <thread>
 #include <string>
+#include <thread>
 
 #include "app_profiler.h"
 
 class AclCallBackThread {
 public:
-  AclCallBackThread(const std::string& sname, const std::string& tname) {
+  AclCallBackThread(const std::string &sname, const std::string &tname) {
     worker_thread = std::thread([sname, tname, this]() {
       SetStreamName(sname);
       SetThreadName(tname);

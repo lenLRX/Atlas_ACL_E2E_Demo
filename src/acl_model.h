@@ -35,6 +35,14 @@ public:
     return host_buffer;
   }
 
+  void CopyToDevice() {
+    if (host_buffer != nullptr && !IsDeviceMode()) {
+      // copy buffer back to device
+      CHECK_ACL(aclrtMemcpy(device_buffer, buffer_size, host_buffer,
+                            buffer_size, ACL_MEMCPY_HOST_TO_DEVICE));
+    }
+  }
+
   void *GetDevicePtr() { return device_buffer; }
 
   ~DeviceBuffer() {

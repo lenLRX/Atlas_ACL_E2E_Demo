@@ -7,12 +7,12 @@
 #include "acl/ops/acl_dvpp.h"
 #include "acl_cb_thread.h"
 
-#include "util.h"
 #include "acl_model.h"
+#include "util.h"
 
 class DvppEncoder {
 public:
-  using OutTy = std::tuple<void*, uint32_t>;
+  using OutTy = std::tuple<void *, uint32_t>;
   DvppEncoder();
   ~DvppEncoder();
   void Destory();

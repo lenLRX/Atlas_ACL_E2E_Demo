@@ -31,8 +31,8 @@ const char *FreeTypeErrorMessage(FT_Error err) {
 #include <exception>
 #include <iostream>
 #include <locale>
-#include <vector>
 #include <mutex>
+#include <vector>
 
 #include "drawing.h"
 

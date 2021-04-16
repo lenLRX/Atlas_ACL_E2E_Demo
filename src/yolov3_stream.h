@@ -33,6 +33,7 @@ public:
   using OutTy = DeviceBufferPtr;
   Yolov3PostProcess(int width, int height);
   OutTy Process(InTy input);
+
 private:
   int width;
   int height;

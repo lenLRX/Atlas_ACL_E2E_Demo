@@ -46,7 +46,8 @@ private:
   std::string thread_name;
   std::string stream_name;
   bool raii;
-  std::chrono::time_point<std::chrono::steady_clock, std::chrono::microseconds> start_us;
+  std::chrono::time_point<std::chrono::steady_clock, std::chrono::microseconds>
+      start_us;
 };
 
 #define APP_PROFILE(name)                                                      \

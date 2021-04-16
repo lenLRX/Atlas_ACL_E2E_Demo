@@ -29,7 +29,7 @@ public:
 
   void ShutDown() {}
   void Process(DeviceBufferPtr buffer);
-  void Process(std::tuple<void*, uint32_t> buffer);
+  void Process(std::tuple<void *, uint32_t> buffer);
 
   void Wait4Stream();
 

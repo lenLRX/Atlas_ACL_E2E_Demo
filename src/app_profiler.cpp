@@ -97,8 +97,8 @@ AppProfileGuard::~AppProfileGuard() {
 
 void AppProfileGuard::AddBeginRecord() {
   auto current_tp = std::chrono::steady_clock::now();
-  start_us = std::chrono::time_point_cast<std::chrono::microseconds>(
-      current_tp);
+  start_us =
+      std::chrono::time_point_cast<std::chrono::microseconds>(current_tp);
 }
 
 void AppProfileGuard::AddEndRecord() {

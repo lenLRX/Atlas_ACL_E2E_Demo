@@ -157,7 +157,7 @@ void FFMPEGOutput::Process(DeviceBufferPtr buffer) {
 }
 
 void FFMPEGOutput::Wait4Stream() {
-    if (!output_is_file) {
+  if (!output_is_file) {
     // if output is not file, e.g. RTSP or RTMP
     // we must not send too fast
     auto now = std::chrono::steady_clock::now();
@@ -219,11 +219,9 @@ static void dontfree(void *opaque, uint8_t *data) {
   // tell ffmpeg dont free data
 }
 
-static void custom_free(void *opaque, uint8_t *data) {
-  free(data);
-}
+static void custom_free(void *opaque, uint8_t *data) { free(data); }
 
-void FFMPEGOutput::Process(std::tuple<void*, uint32_t> buffer) {
+void FFMPEGOutput::Process(std::tuple<void *, uint32_t> buffer) {
   SendEncodedFrame(std::get<0>(buffer), std::get<1>(buffer));
 }
 
@@ -239,8 +237,9 @@ void FFMPEGOutput::SendEncodedFrame(void *pdata, int size) {
   pkt.flags = AV_PKT_FLAG_KEY;
   // av_packet_from_data(&pkt, (uint8_t*)pdata, size);
 
-  pkt.buf = av_buffer_create(
-      (uint8_t *)pdata, size + AV_INPUT_BUFFER_PADDING_SIZE, custom_free, NULL, 0);
+  pkt.buf =
+      av_buffer_create((uint8_t *)pdata, size + AV_INPUT_BUFFER_PADDING_SIZE,
+                       custom_free, NULL, 0);
 
   pkt.data = (uint8_t *)pdata;
   pkt.size = size;
