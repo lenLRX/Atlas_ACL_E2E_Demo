@@ -115,40 +115,6 @@ target_link_libraries(acl_demo
 
 if(BUILD_ALL_DEMO)
 
-add_executable(acl_cam
-        src/main.cpp)
-
-target_link_libraries(acl_cam
-        acl_demo)
-
-
-add_executable(acl_cam_yolov3_pp
-        src/main_yolov3_pp.cpp)
-
-target_link_libraries(acl_cam_yolov3_pp
-        acl_demo)
-
-add_executable(acl_video_yolov3_pp
-        src/main_yolov3_video.cpp)
-
-target_link_libraries(acl_video_yolov3_pp
-        acl_demo)
-
-add_executable(acl_hw_enc
-        src/main_hw_encode.cpp)
-
-target_link_libraries(acl_hw_enc
-        acl_demo)
-
-
-add_executable(rtsp_test
-        src/main_rtsp_client_test.cpp)
-
-target_link_libraries(rtsp_test
-        acl_demo)
-
-endif(BUILD_ALL_DEMO)
-
 
 add_executable(acl_demo_app
         src/acl_demo_app.cpp)
