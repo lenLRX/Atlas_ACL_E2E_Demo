@@ -1,10 +1,8 @@
-# Copyright (c) Huawei Technologies Co., Ltd. 2020. All rights reserved.
-
-# CMake lowest version requirement
+#CMake lowest version requirement
 cmake_minimum_required(VERSION 3.5.1)
 
-# project information
-project(acl_cam)
+#project information
+project(acl_e2e_demo)
 
 include(cmake/detect_device.cmake)
 
@@ -23,10 +21,7 @@ endif()
 
 message(STATUS "build with libmedia ${HAS_LIBMEDIA}")
 
-option(BUILD_DEEP_SORT "build deepsort demo" OFF)
-option(BUILD_ALL_DEMO "build all useless demo" OFF)
-
-# Compile options
+#Compile options
 add_compile_options(-std=c++17 -g -O0)
 
 find_package(Freetype REQUIRED)
@@ -48,10 +43,11 @@ else ()
         message(STATUS "set ACL_PATH to default path: /home/HwHiAiUser/Ascend/acllib")    
 endif()
 
-# Header path
+#Header path
 include_directories(
 	/usr/local/Ascend/include # for peripheral_api.h
 	${ACL_PATH}/include # acl hearders
+        /usr/include/python3.6 # for numpy headers
         ${CMAKE_SOURCE_DIR}/src
         ${FREETYPE_INCLUDE_DIRS})
 
@@ -59,7 +55,7 @@ if(BUILD_DEEP_SORT)
     include_directories(/usr/include/python3.6)
 endif(BUILD_DEEP_SORT)
 
-# add host lib path
+#add host lib path
 link_directories(
 	/usr/lib64/
 	${ACL_PATH}/lib64/
@@ -79,7 +75,8 @@ set(DEMO_LIB_SRC
         src/camera_input.cpp
         src/app_profiler.cpp
         src/yolov3_stream.cpp
-        src/signal_handler.cpp)
+        src/signal_handler.cpp
+        src/deep_sort_stream.cpp)
 
 add_library(acl_demo SHARED
         ${DEMO_LIB_SRC})
@@ -99,6 +96,7 @@ set(DEMO_DEP_LIBS
         avformat
         avutil
         avcodec
+        python3.6m
         ${FREETYPE_LIBRARIES})
 
 if (${ATLAS_DEVICE} STREQUAL "Atlas200DK")
@@ -113,21 +111,8 @@ target_link_libraries(acl_demo
         ${DEMO_DEP_LIBS}
         )
 
-if(BUILD_ALL_DEMO)
-
-
 add_executable(acl_demo_app
         src/acl_demo_app.cpp)
 
 target_link_libraries(acl_demo_app
         acl_demo)
-
-if(BUILD_DEEP_SORT)
-    add_executable(deepsort_test
-        src/deep_sort/deep_sort_main.cpp
-        src/deep_sort/deep_sort_py.cpp)
-
-    target_link_libraries(deepsort_test
-        acl_demo
-        python3.6m)
-endif(BUILD_DEEP_SORT)

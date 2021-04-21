@@ -85,7 +85,6 @@ Yolov3PostProcess::OutTy Yolov3PostProcess::Process(InTy input) {
 
   for (int i = 0; i < box_out_num; ++i) {
     float x1 = box_info[box_out_num * 0 + i] * w_ratio;
-    ;
     float y1 = box_info[box_out_num * 1 + i] * h_ratio;
     float x2 = box_info[box_out_num * 2 + i] * w_ratio;
     float y2 = box_info[box_out_num * 3 + i] * h_ratio;

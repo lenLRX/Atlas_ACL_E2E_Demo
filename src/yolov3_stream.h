@@ -16,7 +16,7 @@ class Yolov3Model {
 public:
   // input type: <raw image, resized image>
   using InTy = std::tuple<DeviceBufferPtr, DeviceBufferPtr>;
-  // input type: <box info, raw image>
+  // output type: <box info, raw image>
   using OutTy = std::tuple<ACLModel::DevBufferVec, DeviceBufferPtr>;
 
   Yolov3Model(const std::string &path, aclrtStream stream);
