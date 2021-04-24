@@ -6,8 +6,8 @@
 
 #include "app_profiler.h"
 #include "signal_handler.h"
+#include "stream_factory.h"
 #include "util.h"
-#include "yolov3_stream.h"
 
 using json = nlohmann::json;
 
@@ -19,7 +19,7 @@ std::vector<std::thread> CreateStreamByConfig(const json &jconfig) {
     exit(-1);
   }
   for (const json &jstream : jconfig) {
-    vec_threads.push_back(MakeYolov3Stream(jstream));
+    vec_threads.push_back(StreamFactory::MakeStream(jstream));
   }
   return vec_threads;
 }

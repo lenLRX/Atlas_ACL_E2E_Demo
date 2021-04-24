@@ -70,13 +70,13 @@ set(DEMO_LIB_SRC
         src/vpc_batch_crop.cpp
         src/jpeg_encode.cpp
         src/dvpp_encoder.cpp
-        src/yolov3_post.cpp
         src/freetype_helper.cpp
         src/camera_input.cpp
         src/app_profiler.cpp
         src/yolov3_stream.cpp
         src/signal_handler.cpp
-        src/deep_sort_stream.cpp)
+        src/deep_sort_stream.cpp
+        src/stream_factory.cpp)
 
 add_library(acl_demo SHARED
         ${DEMO_LIB_SRC})

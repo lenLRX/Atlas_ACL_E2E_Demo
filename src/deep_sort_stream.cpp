@@ -12,6 +12,7 @@
 #include "ffmpeg_output.h"
 #include "jpeg_encode.h"
 #include "signal_handler.h"
+#include "stream_factory.h"
 #include "task_node.h"
 #include "util.h"
 #include "vpc_batch_crop.h"
@@ -54,7 +55,7 @@ private:
       return;
     }
 
-    PyObject *init_fn = PyObject_GetAttrString(deepsort_module, "init_tracker");
+    init_fn = PyObject_GetAttrString(deepsort_module, "init_tracker");
     if (init_fn == NULL) {
       PyErr_Print();
       return;
@@ -66,9 +67,16 @@ private:
       PyErr_Print();
       return;
     }
+    PyEval_InitThreads();
+    _save = PyEval_SaveThread();
   }
 
-  ~PyEnv() { Py_FinalizeEx(); }
+  ~PyEnv() {
+    PyEval_RestoreThread(_save);
+    Py_FinalizeEx();
+  }
+
+  PyThreadState *_save;
   PyObject *numpy;
   PyObject *deepsort_module;
   PyObject *init_fn;
@@ -86,6 +94,7 @@ const static int yolov3_model_size = 416;
 DeepSortCropProcess::DeepSortCropProcess(aclrtStream stream, int width,
                                          int height)
     : crop_stream(stream), crop_engine(stream), width(width), height(height) {
+  crop_engine.Init(height, width);
   h_ratio = height / (float)yolov3_model_size;
   w_ratio = width / (float)yolov3_model_size;
 }
@@ -233,7 +242,7 @@ DeepSortModel::OutTy DeepSortModel::Process(InTy input_tup) {
   for (int i = 0; i < batch_num; ++i) {
     auto output_buffers = deepsort_model.Infer({feature_vec[i]});
     int actual_batch_size =
-        std::min(deepsort_batch_size, batch_num - i * deepsort_batch_size);
+        std::min(deepsort_batch_size, box_num - i * deepsort_batch_size);
     for (int batch_i = 0; batch_i < actual_batch_size; ++batch_i) {
       memcpy(output_buffer + output_i * output_feature_size,
              output_buffers[0]->GetHostPtr(), output_feature_size);
@@ -250,6 +259,7 @@ DeepSortModel::OutTy DeepSortModel::Process(InTy input_tup) {
 
 DeepSortTracker::DeepSortTracker() {
   PyEnv &env = PyEnv::GetInstance();
+  PyGILGuard py_gil_guard;
   PyObject *init_fn = env.GetInitFn();
   PyObject *init_arg = PyTuple_New(0);
   tracker_ctx = PyObject_Call(init_fn, init_arg, NULL);
@@ -278,6 +288,8 @@ DeepSortTracker::DeepSortTracker() {
 DeepSortTracker::OutTy DeepSortTracker::Process(InTy input_tup) {
   APP_PROFILE(DeepSortTracker);
 
+  PyGILGuard py_gil_guard;
+
   BoxInfo &box_info = std::get<0>(input_tup);
   auto &image_buffer = std::get<1>(input_tup);
   uint8_t *feature_buffer = std::get<2>(input_tup);
@@ -289,7 +301,6 @@ DeepSortTracker::OutTy DeepSortTracker::Process(InTy input_tup) {
   PyEnv &env = PyEnv::GetInstance();
 
   int feature_num = scores.size();
-
   npy_intp boxes_dim[2] = {feature_num, 4};
   const int boxes_nd = 2;
 
@@ -314,6 +325,9 @@ DeepSortTracker::OutTy DeepSortTracker::Process(InTy input_tup) {
 
   PyObject *detection_arg =
       Py_BuildValue("(O,O,O)", boxes_arr, scores_arr, feature_arr);
+  Py_XDECREF(boxes_arr);
+  Py_XDECREF(scores_arr);
+  Py_XDECREF(feature_arr);
 
   if (detection_arg == NULL) {
     PyErr_Print();
@@ -337,6 +351,8 @@ DeepSortTracker::OutTy DeepSortTracker::Process(InTy input_tup) {
   }
 
   PyObject *upd_result = PyObject_Call(update_tracker_fn, update_arg, NULL);
+
+  Py_XDECREF(update_arg);
 
   if (upd_result == NULL) {
     PyErr_Print();
@@ -408,9 +424,6 @@ DeepSortPostProcess::OutTy DeepSortPostProcess::Process(InTy input) {
   for (const auto &track : trackings) {
     auto &color = colors[track.track_id % colors.size()];
     img.DrawRect(track.x1, track.y1, track.x2, track.y2, color, 3);
-    std::cout << "draw track id:" << track.track_id << " (" << track.x1 << ","
-              << track.y1 << "," << track.x2 << "," << track.y2 << ")"
-              << std::endl;
     img.DrawText(track.x1, track.y2, std::to_string(track.track_id), color);
   }
   return image_buffer;
@@ -527,6 +540,7 @@ void DeepSortStreamThread(json config) {
   ThreadSafeQueueWithCapacity<DeepSortTracker::OutTy> deepsort_pp_queue(
       queue_size);
   tracker_node.SetOutputQueue(&deepsort_pp_queue);
+  tracker_node.Start(ctx);
 
   DeepSortPostProcess deepsort_pp(width, height);
   TaskNode<DeepSortPostProcess, DeepSortPostProcess::InTy,
@@ -582,6 +596,7 @@ void DeepSortStreamThread(json config) {
   resize_engine_node.Join();
   yolov3_model_node.Join();
   deepsort_crop_node.Join();
+  tracker_node.Join();
   deepsort_model_node.Join();
   deepsort_pp_node.Join();
   if (hardware_enc) {
@@ -607,3 +622,5 @@ void DeepSortStreamThread(json config) {
 std::thread MakeDeepSortStream(json config) {
   return std::thread(DeepSortStreamThread, config);
 }
+
+REGSITER_STREAM(deep_sort_demo, MakeDeepSortStream);

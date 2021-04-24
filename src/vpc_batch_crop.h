@@ -20,16 +20,17 @@ public:
   aclrtStream GetStream();
 
 private:
-  aclError CropBatch(int *x1, int *y1, int *x2, int *y2, uint8_t **dst_array,
-                     int *dst_h, int *dst_w, int num);
+  aclError CropBatch(uint8_t *src_buffer, int *x1, int *y1, int *x2, int *y2,
+                     uint8_t **dst_array, int *dst_h, int *dst_w, int num);
   aclError SetPicDesc(acldvppPicDesc *pic_desc, int h, int w, uint8_t *buffer);
   acldvppChannelDesc *channel_desc;
-  acldvppBatchPicDesc *src_batch_desc;
   aclrtStream stream;
 
-  void *dvpp_input_mem;
-  uint8_t *host_output_mem;
   int input_buffer_size;
+  int src_w;
+  int src_h;
+  int src_w_stride;
+  int src_h_stride;
   acldvppRoiConfig **crop_areas;
 };
 

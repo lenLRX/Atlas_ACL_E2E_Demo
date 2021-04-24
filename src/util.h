@@ -3,6 +3,7 @@
 
 #include "acl/acl.h"
 #include "acl/ops/acl_dvpp.h"
+#include <Python.h>
 #include <chrono>
 #include <condition_variable>
 #include <deque>
@@ -274,6 +275,27 @@ public:
     full_cond.notify_one();
     return true;
   }
+};
+
+// https://docs.python.org/3/c-api/init.html#non-python-created-threads
+class PyGILGuard {
+public:
+  PyGILGuard() {
+    GetLock().lock();
+    gstate = PyGILState_Ensure();
+  }
+  ~PyGILGuard() {
+    PyGILState_Release(gstate);
+    GetLock().unlock();
+  }
+
+  static std::mutex &GetLock() {
+    static std::mutex mtx;
+    return mtx;
+  }
+
+private:
+  PyGILState_STATE gstate;
 };
 
 #endif //__ACL_UTIL_H__

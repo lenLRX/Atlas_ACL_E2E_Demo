@@ -16,6 +16,7 @@
 #include "acl_cb_thread.h"
 #include "app_profiler.h"
 #include "signal_handler.h"
+#include "stream_factory.h"
 #include "task_node.h"
 #include "yolov3_stream.h"
 
@@ -256,3 +257,5 @@ void Yolov3StreamThread(json config) {
 std::thread MakeYolov3Stream(json config) {
   return std::thread(Yolov3StreamThread, config);
 }
+
+REGSITER_STREAM(yolov3_demo, MakeYolov3Stream);
