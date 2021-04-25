@@ -1,30 +1,34 @@
-# Atlas200DK ACL多路推理样例
+# ACL多路端到端推理样例
 这个demo主要包括以下功能点 
 * ffmpeg RTSP/mp4/摄像头视频流输入
 * ffmpeg RTMP/RTSP/mp4视频流输出
 * DVPP H264解码
-* DVPP H264编码(demo中暂时没有开启，因为ACL限制每个进程只能有一个VENC的流，所以现在使用软件编码)
+* DVPP H264编码
 * ACL yolov3推理
+    * DVPP resize
 * [ACL yolov3+deepsort推理](deepsort.md)
+    * DVPP crop resize
 * 在YUV420SP图像上的[画框](src/drawing.h)和[中文字符显示](src/freetype_helper.cpp)
+* 性能分析
 
-## 支持版本
-20.0,20.1,20.2(3.2.0),3.3.0
+## 支持硬件
+* Atlas200DK
+* Atlas300I
+
+## 支持软件版本
+* Atlas200DK: 20.0,20.1,20.2(3.2.0),3.3.0
+* Atlas300I: 20.1
 
 ## 环境搭建
-[环境搭建文档](env.md)
-## 模型转换
-1. 在官方文档的"开发环境"上首先导入atc依赖的环境变量,以这个[链接](https://support.huaweicloud.com/odevg-A200dk_3000/atlaste_10_0363.html)为例。注意install_path要设置为实际安装的路径。
-
-2. 下载yolov3的[模型文件](https://gitee.com/Atlas200DK/sample-objectdetectionbyyolov3/blob/1.3x.0.0/MyModel/yolov3.caffemodel)
-3. 转换模型,yolov3_pp.prototxt和aipp_yolov3_pp.cfg在model文件夹中
-```
-atc --model=yolov3_pp.prototxt --weight=yolov3.caffemodel --framework=0 --output=sample-yolov3_pp_416 --soc_version=Ascend310 --insert_op_conf=./aipp_yolov3_pp.cfg
-```
-4. 将得到的sample-yolov3_pp_416.om拷贝到model文件夹中
+* [环境搭建文档(Atlas200DK)](env_atlas200dk.md)
+* [环境搭建文档(Atlas300I)](env.md)
+## YOLO V3 模型转换
+[yolov3 模型转换文档](yolov3_model_cvt.md)
+## DeepSort 模型转换
+[deepsort 模型转换文档](deep_sort_model_cvt.md)
 ## 运行测试(RTSP输入RTMP输出)
 1. 在Atlas200DK上启动nginx
-2. 准备两个rtsp视频流，这里使用ubuntu上的vlc命令行为例。这里的视频文件请替换为你对应的测试文件。(vlc在windows上也可以在节目上完成类似的操作。)
+2. 准备两个rtsp视频流，这里使用ubuntu上的vlc命令行为例。这里的视频文件请替换为你对应的测试文件。(vlc在windows上也可以在界面上完成类似的操作。)
 ```
 nohup vlc -v road_traffic_test1.mp4 --sout '#rtp{sdp=rtsp://:8554/tt1.mp4}' &
 nohup vlc -v road_traffic_test2.mp4 --sout '#rtp{sdp=rtsp://:8555/tt2.mp4}' &

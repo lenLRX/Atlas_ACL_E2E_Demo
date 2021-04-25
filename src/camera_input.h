@@ -1,11 +1,12 @@
 #ifndef __CAMERA_INPUT_H__
 #define __CAMERA_INPUT_H__
 
-#include <functional>
+#include <atomic>
 #include <iostream>
 #include <string>
 
 #include "acl_model.h"
+#include "util.h"
 
 class CameraInput {
 public:
@@ -13,19 +14,21 @@ public:
   ~CameraInput();
   // 720P@20fps
   int Init(int id);
-  void RegisterHandler(std::function<void(DeviceBufferPtr)> handler);
   void Run();
+  void Process() { Run(); }
   int GetHeight();
   int GetWidth();
   int GetFPS();
-
+  void SetOutputQueue(ThreadSafeQueueWithCapacity<DeviceBufferPtr> *queue);
+  void Stop();
 private:
-  std::function<void(DeviceBufferPtr)> buffer_handler;
   int camera_id;
   int cam_buffer_size;
   int height;
   int width;
   int fps;
+  ThreadSafeQueueWithCapacity<DeviceBufferPtr> *output_queue{nullptr};
+  std::atomic<bool> running{true};
 };
 
 #endif //__CAMERA_INPUT_H__

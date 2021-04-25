@@ -1,4 +1,5 @@
 #include "camera_input.h"
+#include "app_profiler.h"
 #include "util.h"
 
 #ifdef HAS_CAMERA
@@ -29,13 +30,10 @@ int InitMediaLib() {
   return media_lib_status;
 }
 
-CameraInput::~CameraInput() { free(camera_buffer); }
+CameraInput::~CameraInput() { }
 
 int CameraInput::Init(int id) {
   camera_id = id;
-  if (camera_buffer) {
-    throw std::runtime_error("camera_buffer already inited!");
-  }
   int ret;
   ret = InitMediaLib();
 
@@ -100,7 +98,8 @@ int CameraInput::Init(int id) {
 }
 
 void CameraInput::Run() {
-  while (true) {
+  while (running) {
+    APP_PROFILE(CameraInput::Run);
     uint8_t *camera_buffer = (uint8_t *)malloc(cam_buffer_size);
     int ret = ReadFrameFromCamera(camera_id, camera_buffer, &cam_buffer_size);
     if (ret != LIBMEDIA_STATUS_OK) {
@@ -109,9 +108,9 @@ void CameraInput::Run() {
       free(camera_buffer);
       return;
     }
-    auto dev_cam_buffer = std::shared_ptr<DeviceBufferPtr>(
+    auto dev_cam_buffer = std::make_shared<DeviceBuffer>(
         camera_buffer, cam_buffer_size, [](void *mem) { free(mem); });
-    buffer_handler(camera_buffer);
+    output_queue->push(dev_cam_buffer);
   }
 }
 
@@ -127,15 +126,18 @@ void CameraInput::Run() {
   throw std::runtime_error("Only Atlas200DK support camera!");
 }
 
-void CameraInput::RegisterHandler(
-    std::function<void(DeviceBufferPtr)> handler) {
-  buffer_handler = handler;
-}
-
 #endif
+
+void CameraInput::SetOutputQueue(ThreadSafeQueueWithCapacity<DeviceBufferPtr> *queue) {
+  output_queue = queue;
+}
 
 int CameraInput::GetHeight() { return height; }
 
 int CameraInput::GetWidth() { return width; }
 
 int CameraInput::GetFPS() { return fps; }
+
+void CameraInput::Stop() {
+  running = false;
+}
