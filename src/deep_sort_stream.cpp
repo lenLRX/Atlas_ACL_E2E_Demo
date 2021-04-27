@@ -449,7 +449,7 @@ void DeepSortStreamThread(json config) {
   CHECK_ACL(aclrtCreateStream(&stream));
   CHECK_ACL(aclrtSubscribeReport(cb_thread.GetPid(), stream));
 
-  const int queue_size = 16;
+  const int queue_size = 4;
 
   FFMPEGInput ffmpeg_input;
   CameraInput camera_input;

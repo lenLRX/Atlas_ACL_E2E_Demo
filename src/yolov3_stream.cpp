@@ -61,6 +61,9 @@ Yolov3Model::OutTy Yolov3Model::Process(Yolov3Model::InTy bufferx2) {
 
   auto output_buffers =
       yolov3_model.Infer({std::get<1>(bufferx2), img_info_buffer});
+  if (!IsDeviceMode()) {
+    CHECK_ACL(aclrtFreeHost(host_img_info));
+  }
   return {output_buffers, std::get<0>(bufferx2)};
 }
 
@@ -118,7 +121,7 @@ void Yolov3StreamThread(json config) {
   CHECK_ACL(aclrtCreateStream(&stream));
   CHECK_ACL(aclrtSubscribeReport(cb_thread.GetPid(), stream));
 
-  const int queue_size = 16;
+  const int queue_size = 4;
 
   FFMPEGInput ffmpeg_input;
   CameraInput camera_input;

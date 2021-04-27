@@ -128,10 +128,6 @@ cd run_package/
 chmod +x Ascend-cann-nnrt_3.3.0.alpha001_linux-aarch64.run
 ./Ascend-cann-nnrt_3.3.0.alpha001_linux-aarch64.run --extract=. --noexec
 ```
-这里可能会报一个错，但是不影响，请忽略:
-```
-[NNRT] [20210313-05:51:01] [ERROR] Unsupported parameters: --keep
-```
 然后安装acllib
 ```
 cd run_package/

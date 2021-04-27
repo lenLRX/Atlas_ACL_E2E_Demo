@@ -32,6 +32,7 @@ private:
   aclvencFrameConfig *frame_config;
 
   ThreadSafeQueueWithCapacity<OutTy> *output_queue{nullptr};
+  uint32_t frame_count{0};
 };
 
 #endif //__DVPP_ENCODER_H__

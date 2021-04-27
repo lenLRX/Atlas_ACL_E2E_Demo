@@ -5,6 +5,14 @@
 #include <mutex>
 #include <thread>
 
+class EncoderContext {
+public:
+  EncoderContext(DeviceBufferPtr buf, DvppEncoder* encoder) :buffer(buf), encoder(encoder) {}
+  // hold reference until encode is done
+  DeviceBufferPtr buffer;
+  DvppEncoder* encoder;
+};
+
 // only 1 stream can use VENC in an process
 class EncoderLock {
 public:
@@ -47,9 +55,11 @@ static void EncoderCallback(acldvppPicDesc *input, acldvppStreamDesc *output,
                           ACL_MEMCPY_DEVICE_TO_HOST));
   }
 
-  DvppEncoder *encoder = (DvppEncoder *)userdata;
+  EncoderContext* ctx = (EncoderContext*)userdata;
+  DvppEncoder *encoder = ctx->encoder;
   auto *queue = encoder->GetOutputQueue();
   queue->push(std::make_tuple(host_buffer, data_size));
+  delete ctx;
 }
 
 DvppEncoder::DvppEncoder() {
@@ -84,7 +94,7 @@ aclError DvppEncoder::Init(const pthread_t thread_id, int h, int w) {
   CHECK_ACL(aclvencSetChannelDescThreadId(channel_desc, thread_id));
   CHECK_ACL(aclvencSetChannelDescCallback(channel_desc, &EncoderCallback));
   CHECK_ACL(aclvencSetChannelDescEnType(channel_desc,
-                                        H264_HIGH_LEVEL)); // H265-main level
+                                        H264_MAIN_LEVEL)); // H265-main level
   CHECK_ACL(aclvencSetChannelDescPicFormat(channel_desc,
                                            PIXEL_FORMAT_YUV_SEMIPLANAR_420));
   CHECK_ACL(aclvencSetChannelDescPicHeight(channel_desc, h));
@@ -117,6 +127,7 @@ void DvppEncoder::Process(DeviceBufferPtr buffer) {
   // copy buffer to device if it is modified by host (box drawing)
   buffer->CopyToDevice();
   acldvppPicDesc *pic_desc = acldvppCreatePicDesc();
+  EncoderContext* ctx = new EncoderContext(buffer, this);
   CHECK_ACL(acldvppSetPicDescData(pic_desc, buffer->GetDevicePtr()));
   CHECK_ACL(acldvppSetPicDescSize(pic_desc, size));
   CHECK_ACL(acldvppSetPicDescFormat(pic_desc, PIXEL_FORMAT_YUV_SEMIPLANAR_420));
@@ -124,8 +135,16 @@ void DvppEncoder::Process(DeviceBufferPtr buffer) {
   CHECK_ACL(acldvppSetPicDescHeight(pic_desc, height));
   CHECK_ACL(acldvppSetPicDescWidthStride(pic_desc, width));
   CHECK_ACL(acldvppSetPicDescHeightStride(pic_desc, height));
+  // IFrame every 16 frame
+  if (frame_count % 16 == 0) {
+    CHECK_ACL(aclvencSetFrameConfigForceIFrame(frame_config, 1));
+  }
+  else {
+    CHECK_ACL(aclvencSetFrameConfigForceIFrame(frame_config, 0));
+  }
+  ++frame_count;
   CHECK_ACL(
-      aclvencSendFrame(channel_desc, pic_desc, nullptr, frame_config, this));
+      aclvencSendFrame(channel_desc, pic_desc, nullptr, frame_config, ctx));
 }
 
 void DvppEncoder::SetOutputQueue(ThreadSafeQueueWithCapacity<OutTy> *queue) {
