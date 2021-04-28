@@ -7,10 +7,11 @@
 
 class EncoderContext {
 public:
-  EncoderContext(DeviceBufferPtr buf, DvppEncoder* encoder) :buffer(buf), encoder(encoder) {}
+  EncoderContext(DeviceBufferPtr buf, DvppEncoder *encoder)
+      : buffer(buf), encoder(encoder) {}
   // hold reference until encode is done
   DeviceBufferPtr buffer;
-  DvppEncoder* encoder;
+  DvppEncoder *encoder;
 };
 
 // only 1 stream can use VENC in an process
@@ -55,7 +56,7 @@ static void EncoderCallback(acldvppPicDesc *input, acldvppStreamDesc *output,
                           ACL_MEMCPY_DEVICE_TO_HOST));
   }
 
-  EncoderContext* ctx = (EncoderContext*)userdata;
+  EncoderContext *ctx = (EncoderContext *)userdata;
   DvppEncoder *encoder = ctx->encoder;
   auto *queue = encoder->GetOutputQueue();
   queue->push(std::make_tuple(host_buffer, data_size));
@@ -127,7 +128,7 @@ void DvppEncoder::Process(DeviceBufferPtr buffer) {
   // copy buffer to device if it is modified by host (box drawing)
   buffer->CopyToDevice();
   acldvppPicDesc *pic_desc = acldvppCreatePicDesc();
-  EncoderContext* ctx = new EncoderContext(buffer, this);
+  EncoderContext *ctx = new EncoderContext(buffer, this);
   CHECK_ACL(acldvppSetPicDescData(pic_desc, buffer->GetDevicePtr()));
   CHECK_ACL(acldvppSetPicDescSize(pic_desc, size));
   CHECK_ACL(acldvppSetPicDescFormat(pic_desc, PIXEL_FORMAT_YUV_SEMIPLANAR_420));
@@ -138,8 +139,7 @@ void DvppEncoder::Process(DeviceBufferPtr buffer) {
   // IFrame every 16 frame
   if (frame_count % 16 == 0) {
     CHECK_ACL(aclvencSetFrameConfigForceIFrame(frame_config, 1));
-  }
-  else {
+  } else {
     CHECK_ACL(aclvencSetFrameConfigForceIFrame(frame_config, 0));
   }
   ++frame_count;

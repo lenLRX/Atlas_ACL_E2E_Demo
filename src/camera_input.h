@@ -16,11 +16,13 @@ public:
   int Init(int id);
   void Run();
   void Process() { Run(); }
+  void ShutDown() { output_queue->ShutDown(); }
   int GetHeight();
   int GetWidth();
   int GetFPS();
   void SetOutputQueue(ThreadSafeQueueWithCapacity<DeviceBufferPtr> *queue);
   void Stop();
+
 private:
   int camera_id;
   int cam_buffer_size;

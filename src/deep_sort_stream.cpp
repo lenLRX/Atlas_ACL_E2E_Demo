@@ -440,14 +440,19 @@ void DeepSortStreamThread(json config) {
   }
 
   CHECK_ACL(aclrtSetDevice(0));
-  AclCallBackThread cb_thread(input_addr, "DVPP");
+  AclCallBackThread cb_decoder_thread(input_addr, "DVPP_DECODER");
+  AclCallBackThread cb_encoder_thread(input_addr, "DVPP_ENCODER");
 
   aclrtContext ctx;
   CHECK_ACL(aclrtCreateContext(&ctx, 0));
   CHECK_ACL(aclrtSetCurrentContext(ctx));
-  aclrtStream stream;
-  CHECK_ACL(aclrtCreateStream(&stream));
-  CHECK_ACL(aclrtSubscribeReport(cb_thread.GetPid(), stream));
+  aclrtStream decoder_stream;
+  CHECK_ACL(aclrtCreateStream(&decoder_stream));
+  CHECK_ACL(aclrtSubscribeReport(cb_decoder_thread.GetPid(), decoder_stream));
+
+  aclrtStream encoder_stream;
+  CHECK_ACL(aclrtCreateStream(&encoder_stream));
+  CHECK_ACL(aclrtSubscribeReport(cb_encoder_thread.GetPid(), encoder_stream));
 
   const int queue_size = 4;
 
@@ -480,7 +485,8 @@ void DeepSortStreamThread(json config) {
   decoder_node.Start(ctx);
 
   if (camera_id < 0) {
-    decoder.Init(cb_thread.GetPid(), height, width, ffmpeg_input.GetProfile());
+    decoder.Init(cb_decoder_thread.GetPid(), height, width,
+                 ffmpeg_input.GetProfile());
     decoder.SetDeviceCtx(&ctx);
   }
 
@@ -571,7 +577,7 @@ void DeepSortStreamThread(json config) {
   ThreadSafeQueueWithCapacity<DvppEncoder::OutTy> encoder_output_queue(
       queue_size);
   if (hardware_enc) {
-    encoder.Init(cb_thread.GetPid(), height, width);
+    encoder.Init(cb_encoder_thread.GetPid(), height, width);
     encoder.SetOutputQueue(&encoder_output_queue);
     encoder_node.SetInputQueue(&deepsort_output_queue);
     ffmpeg_hw_output_node.SetInputQueue(&encoder_output_queue);
@@ -589,8 +595,14 @@ void DeepSortStreamThread(json config) {
     SingalHandler::Register([&]() { ffmpeg_input.Stop(); });
     ffmpeg_input_node.Start(ctx);
     ffmpeg_input_node.Join();
+    decoder.ShutDown();
   } else {
-    camera_input.Run();
+    TaskNode<CameraInput, void, void> camera_input_node(
+        &camera_input, "CameraInput", input_addr);
+    camera_input.SetOutputQueue(&resize_input_queue);
+    SingalHandler::Register([&]() { camera_input.Stop(); });
+    camera_input_node.Start(ctx);
+    camera_input_node.Join();
   }
 
   resize_engine_node.Join();
@@ -615,7 +627,8 @@ void DeepSortStreamThread(json config) {
   resize_engine.Destory();
   ffmpeg_output.Close();
 
-  CHECK_ACL(aclrtUnSubscribeReport(cb_thread.GetPid(), stream));
+  CHECK_ACL(aclrtUnSubscribeReport(cb_decoder_thread.GetPid(), decoder_stream));
+  CHECK_ACL(aclrtUnSubscribeReport(cb_encoder_thread.GetPid(), encoder_stream));
   std::cout << "End of stream input: " << input_addr << std::endl;
 }
 

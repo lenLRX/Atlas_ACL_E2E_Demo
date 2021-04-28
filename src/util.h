@@ -244,7 +244,15 @@ public:
   void push(T const &value) {
     {
       std::unique_lock<std::mutex> lock(d_mutex);
-      full_cond.wait(lock, [=] { return this->d_queue.size() < capacity; });
+      while (true) {
+        if (shutdowned) {
+          return;
+        }
+        if (d_queue.size() < capacity) {
+          break;
+        }
+        full_cond.wait(lock);
+      }
       d_queue.push_front(value);
     }
     pop_cond.notify_one();
@@ -255,6 +263,7 @@ public:
       std::unique_lock<std::mutex> lock(d_mutex);
       shutdowned = true;
     }
+    full_cond.notify_all();
     pop_cond.notify_all();
   }
 

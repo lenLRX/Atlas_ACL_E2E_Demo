@@ -30,7 +30,7 @@ int InitMediaLib() {
   return media_lib_status;
 }
 
-CameraInput::~CameraInput() { }
+CameraInput::~CameraInput() {}
 
 int CameraInput::Init(int id) {
   camera_id = id;
@@ -100,7 +100,9 @@ int CameraInput::Init(int id) {
 void CameraInput::Run() {
   while (running) {
     APP_PROFILE(CameraInput::Run);
-    uint8_t *camera_buffer = (uint8_t *)malloc(cam_buffer_size);
+    // uint8_t *camera_buffer = (uint8_t *)malloc(cam_buffer_size);
+    void *camera_buffer;
+    CHECK_ACL(acldvppMalloc(&camera_buffer, cam_buffer_size));
     int ret = ReadFrameFromCamera(camera_id, camera_buffer, &cam_buffer_size);
     if (ret != LIBMEDIA_STATUS_OK) {
       std::cerr << "ReadFrameFromCamera failed, camera id: " << camera_id
@@ -109,7 +111,7 @@ void CameraInput::Run() {
       return;
     }
     auto dev_cam_buffer = std::make_shared<DeviceBuffer>(
-        camera_buffer, cam_buffer_size, [](void *mem) { free(mem); });
+        camera_buffer, cam_buffer_size, DeviceBuffer::DvppMemDeleter());
     output_queue->push(dev_cam_buffer);
   }
 }
@@ -128,7 +130,8 @@ void CameraInput::Run() {
 
 #endif
 
-void CameraInput::SetOutputQueue(ThreadSafeQueueWithCapacity<DeviceBufferPtr> *queue) {
+void CameraInput::SetOutputQueue(
+    ThreadSafeQueueWithCapacity<DeviceBufferPtr> *queue) {
   output_queue = queue;
 }
 
@@ -138,6 +141,4 @@ int CameraInput::GetWidth() { return width; }
 
 int CameraInput::GetFPS() { return fps; }
 
-void CameraInput::Stop() {
-  running = false;
-}
+void CameraInput::Stop() { running = false; }
