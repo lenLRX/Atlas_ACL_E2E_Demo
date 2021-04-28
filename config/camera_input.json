@@ -1,0 +1,16 @@
+{
+    "streams": [
+        {
+            "name": "yolov3_demo_stream1",
+            "stream_type": "yolov3_demo",
+            "src": "camera1",
+            "dst": "rtmp://127.0.0.1:1935/myapp/stream1",
+            "hw_encoder": true,
+            "model_path": "./model/sample-yolov3_pp_416.om"
+        }
+    ],
+    "config": {
+        "app_perf": true,
+        "perflog_path": "."
+    }
+}

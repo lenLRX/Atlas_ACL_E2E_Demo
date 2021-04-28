@@ -1,0 +1,7 @@
+macro(detect_device)
+  if (EXISTS /usr/local/Ascend/include/peripheral_api.h)
+    set(ATLAS_DEVICE "Atlas200DK")
+  else ()
+    set(ATLAS_DEVICE "Atlas300")
+  endif()
+endmacro(detect_device)

@@ -10,7 +10,8 @@
 
 class JPEGEncoder {
 public:
-  static aclError Save(const std::string& path, acldvppPicDesc* pic_desc, aclrtStream stream);
+  static aclError Save(const std::string &path, acldvppPicDesc *pic_desc,
+                       aclrtStream stream);
 };
 
-#endif//__JPEG_ENCODE_H__
+#endif //__JPEG_ENCODE_H__

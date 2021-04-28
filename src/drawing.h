@@ -2,10 +2,10 @@
 #define __DRAWING__H__
 
 #include <algorithm>
-#include <iostream>
-#include <string>
-#include <stdint.h>
 #include <cmath>
+#include <iostream>
+#include <stdint.h>
+#include <string>
 
 #include "freetype_helper.h"
 
@@ -27,7 +27,7 @@ public:
     img_w = w;
   }
 
-  void DrawText(int x, int y, const std::string& text, const YUVColor &color) {
+  void DrawText(int x, int y, const std::string &text, const YUVColor &color) {
     RenderText(x, y, text, &color, this);
   }
 
@@ -95,13 +95,9 @@ public:
     uv_offset[1] = color.v;
   }
 
-  inline int GetHeight() const {
-    return img_h;
-  }
+  inline int GetHeight() const { return img_h; }
 
-  inline int GetWidth() const {
-    return img_w;
-  }
+  inline int GetWidth() const { return img_w; }
 
 private:
   uint8_t *y_addr;

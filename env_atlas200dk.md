@@ -120,7 +120,7 @@ chmod +x Ascend-cann-nnrt_20.2.rc1_linux-aarch64.run
 cd run_package/
 ./Ascend-acllib-1.76.22.3.220-linux.aarch64.run --full
 ```
-### 3.3.0版本
+### 3.3.0.alpha001版本
 以下操作使用root用户执行
 
 将Ascend-cann-nnrt_3.3.0.alpha001_linux-aarch64.run传到/root目录下,首先解压:
@@ -128,20 +128,29 @@ cd run_package/
 chmod +x Ascend-cann-nnrt_3.3.0.alpha001_linux-aarch64.run
 ./Ascend-cann-nnrt_3.3.0.alpha001_linux-aarch64.run --extract=. --noexec
 ```
-这里可能会报一个错，但是不影响，请忽略:
-```
-[NNRT] [20210313-05:51:01] [ERROR] Unsupported parameters: --keep
-```
 然后安装acllib
 ```
 cd run_package/
 ./Ascend-acllib-1.77.t21.0.b210-linux.aarch64.run --full
 ```
+### 3.3.0.alpha006版本
+以下操作使用root用户执行
+
+将Ascend-cann-nnrt_3.3.0.alpha006_linux-aarch64.run传到/root目录下,首先解压:
+```
+chmod +x Ascend-cann-nnrt_3.3.0.alpha006_linux-aarch64.run
+./Ascend-cann-nnrt_3.3.0.alpha006_linux-aarch64.run --extract=. --noexec
+```
+然后安装acllib
+```
+cd run_package/
+./Ascend-acllib-1.78.t3.0.b030-linux.aarch64.run --full
+```
 ## 安装demo
 ### 安装依赖
 使用root用户安装以下依赖：
 ```
-apt install cmake git libopencv-dev fonts-droid-fallback libfreetype6-dev
+apt install cmake git libopencv-dev fonts-droid-fallback libfreetype6-dev libspdlog-dev nlohmann-json-dev python3-dev python3-sklearn python3-numpy python3-opencv
 ```
 ### 下载并编译
 <b>以下操作使用HwHiAiUser账户</b>

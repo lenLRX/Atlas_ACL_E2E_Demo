@@ -8,7 +8,14 @@ extern "C" {
 #include "libavutil/imgutils.h"
 }
 
+#include <chrono>
 #include <string>
+#include <tuple>
+
+#include "acl_model.h"
+
+using Duration = std::chrono::duration<double, std::ratio<1>>;
+using TimePoint = std::chrono::time_point<std::chrono::steady_clock>;
 
 class FFMPEGOutput {
 public:
@@ -19,6 +26,12 @@ public:
   int Init(std::string name, int img_h, int img_w, AVRational frame_rate,
            int pic_fmt = AV_PIX_FMT_NV12);
   bool IsValid();
+
+  void ShutDown() {}
+  void Process(DeviceBufferPtr buffer);
+  void Process(std::tuple<void *, uint32_t> buffer);
+
+  void Wait4Stream();
 
   void SendFrame(const uint8_t *pdata);
   void SendEncodedFrame(void *pdata, int size);
@@ -35,6 +48,11 @@ private:
   std::string stream_name;
   int h;
   int w;
+
+  Duration interval;
+  TimePoint last_sent_tp;
+
+  bool output_is_file;
 
   bool valid{false};
 };

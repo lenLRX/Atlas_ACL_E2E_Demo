@@ -19,47 +19,59 @@ aclError ACLModel::Init(const char *model_path) {
   model_desc = aclmdlCreateDesc();
   aclmdlGetDesc(model_desc, model_id);
 
-  input_dataset = aclmdlCreateDataset();
-  output_dataset = aclmdlCreateDataset();
-
   size_t model_input_num = aclmdlGetNumInputs(model_desc);
   size_t model_output_num = aclmdlGetNumOutputs(model_desc);
 
   for (size_t i = 0; i < model_input_num; ++i) {
     size_t buffer_size = aclmdlGetInputSizeByIndex(model_desc, i);
     input_buffer_sizes.push_back(buffer_size);
-    void *input_buffer = malloc(buffer_size);
-    input_buffers.push_back(input_buffer);
-    aclDataBuffer *input_databuffer =
-        aclCreateDataBuffer(input_buffer, buffer_size);
-    CHECK_ACL(aclmdlAddDatasetBuffer(input_dataset, input_databuffer));
   }
 
   for (size_t i = 0; i < model_output_num; ++i) {
     size_t buffer_size = aclmdlGetOutputSizeByIndex(model_desc, i);
     output_buffer_sizes.push_back(buffer_size);
-    void *output_buffer = malloc(buffer_size);
-    output_buffers.push_back(output_buffer);
-    aclDataBuffer *output_databuffer =
-        aclCreateDataBuffer(output_buffer, buffer_size);
-    CHECK_ACL(aclmdlAddDatasetBuffer(output_dataset, output_databuffer));
   }
 
   loaded = true;
   return ACL_ERROR_NONE;
 }
 
-aclError ACLModel::Infer() {
+ACLModel::DevBufferVec ACLModel::Infer(const DevBufferVec &inputs) {
+  DevBufferVec result;
+  aclmdlDataset *input_dataset = aclmdlCreateDataset();
+  aclmdlDataset *output_dataset = aclmdlCreateDataset();
+
+  size_t model_input_num = aclmdlGetNumInputs(model_desc);
+  size_t model_output_num = aclmdlGetNumOutputs(model_desc);
+
+  for (size_t i = 0; i < model_input_num; ++i) {
+    size_t buffer_size = aclmdlGetInputSizeByIndex(model_desc, i);
+    aclDataBuffer *input_databuffer =
+        aclCreateDataBuffer(inputs[i]->GetDevicePtr(), buffer_size);
+    CHECK_ACL(aclmdlAddDatasetBuffer(input_dataset, input_databuffer));
+  }
+
+  for (size_t i = 0; i < model_output_num; ++i) {
+    size_t buffer_size = aclmdlGetOutputSizeByIndex(model_desc, i);
+    void *output_buffer;
+    CHECK_ACL(
+        aclrtMalloc(&output_buffer, buffer_size, ACL_MEM_MALLOC_HUGE_FIRST));
+    auto dev_buffer_ptr = std::make_shared<DeviceBuffer>(
+        output_buffer, buffer_size, DeviceBuffer::DevMemDeleter());
+    result.emplace_back(dev_buffer_ptr);
+    aclDataBuffer *output_databuffer =
+        aclCreateDataBuffer(output_buffer, buffer_size);
+    CHECK_ACL(aclmdlAddDatasetBuffer(output_dataset, output_databuffer));
+  }
+
   CHECK_ACL(
       aclmdlExecuteAsync(model_id, input_dataset, output_dataset, stream));
   CHECK_ACL(aclrtSynchronizeStream(stream));
-  return ACL_ERROR_NONE;
-}
 
-const std::vector<void *> &ACLModel::GetInputBuffer() { return input_buffers; }
+  CHECK_ACL(aclmdlDestroyDataset(input_dataset));
+  CHECK_ACL(aclmdlDestroyDataset(output_dataset));
 
-const std::vector<void *> &ACLModel::GetOutputBuffer() {
-  return output_buffers;
+  return result;
 }
 
 const std::vector<size_t> &ACLModel::GetInputBufferSizes() {
@@ -73,13 +85,13 @@ const std::vector<size_t> &ACLModel::GetOutputBufferSizes() {
 std::string ACLModel::ToString() {
   std::stringstream ss;
   ss << "ACLModel:" << path << "\n"
-     << "Input Num:" << input_buffers.size() << "\n";
+     << "Input Num:" << input_buffer_sizes.size() << "\n";
   ss << "Input shapes:";
   for (auto s : input_buffer_sizes) {
     ss << s << ", ";
   }
   ss << "\n";
-  ss << "Output Num:" << output_buffers.size() << "\n";
+  ss << "Output Num:" << output_buffer_sizes.size() << "\n";
   ss << "Output shapes:";
   for (auto s : output_buffer_sizes) {
     ss << s << ", ";
