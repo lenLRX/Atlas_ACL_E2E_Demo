@@ -113,4 +113,11 @@ private:
   std::thread worker_thread;
 };
 
+// just dorp inputs
+template <typename InputTy> class NullOutput {
+public:
+  void ShutDown() {}
+  void Process(const InputTy &buffer) {}
+};
+
 #endif //__TASK_NODE_H__

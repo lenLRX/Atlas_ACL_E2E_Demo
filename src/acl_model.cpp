@@ -1,4 +1,5 @@
 #include "acl_model.h"
+#include "app_profiler.h"
 #include "util.h"
 
 #include <sstream>
@@ -64,9 +65,12 @@ ACLModel::DevBufferVec ACLModel::Infer(const DevBufferVec &inputs) {
     CHECK_ACL(aclmdlAddDatasetBuffer(output_dataset, output_databuffer));
   }
 
-  CHECK_ACL(
-      aclmdlExecuteAsync(model_id, input_dataset, output_dataset, stream));
-  CHECK_ACL(aclrtSynchronizeStream(stream));
+  {
+    APP_PROFILE(aclmdlExecuteAsync);
+    CHECK_ACL(
+        aclmdlExecuteAsync(model_id, input_dataset, output_dataset, stream));
+    CHECK_ACL(aclrtSynchronizeStream(stream));
+  }
 
   CHECK_ACL(aclmdlDestroyDataset(input_dataset));
   CHECK_ACL(aclmdlDestroyDataset(output_dataset));

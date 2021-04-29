@@ -1,0 +1,16 @@
+{
+    "streams": [
+        {
+            "name": "yolov3_demo_stream1",
+            "stream_type": "yolov3_demo",
+            "src": "road_traffic_test1.mp4",
+            "dst": "null",
+            "hw_encoder": false,
+            "model_path": "./model/sample-yolov3_pp_416.om"
+        }
+    ],
+    "config": {
+        "app_perf": true,
+        "perflog_path": "."
+    }
+}

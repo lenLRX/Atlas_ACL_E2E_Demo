@@ -106,9 +106,10 @@ void Yolov3StreamThread(json config) {
   std::string input_addr = config.at("src");
   std::string output_addr = config.at("dst");
   std::string model_path = config.at("model_path");
+  bool is_null_output = output_addr == "null";
   bool hardware_enc = false;
   if (config.count("hw_encoder")) {
-    hardware_enc = config.at("hw_encoder");
+    hardware_enc = config.at("hw_encoder") && (!is_null_output);
   }
 
   CHECK_ACL(aclrtSetDevice(0));
@@ -184,26 +185,47 @@ void Yolov3StreamThread(json config) {
 
   yolov3_model_node.SetInputQueue(&yolov3_input_queue);
 
-  ThreadSafeQueueWithCapacity<Yolov3Model::OutTy> yolov3_post_input_queue(
+  ThreadSafeQueueWithCapacity<Yolov3Model::OutTy> yolov3_output_queue(
       queue_size);
-  yolov3_model_node.SetOutputQueue(&yolov3_post_input_queue);
+  yolov3_model_node.SetOutputQueue(&yolov3_output_queue);
   yolov3_model_node.Start(ctx);
+
+  NullOutput<Yolov3PostProcess::InTy> null_out;
+  TaskNode<NullOutput<Yolov3PostProcess::InTy>, Yolov3PostProcess::InTy, void>
+      null_out_node(&null_out, "NullOutput", input_addr);
+
+  ThreadSafeQueueWithCapacity<Yolov3Model::OutTy> dummy_output_queue(
+      queue_size);
 
   Yolov3PostProcess post_process(width, height);
   TaskNode<Yolov3PostProcess, Yolov3PostProcess::InTy, Yolov3PostProcess::OutTy>
       post_process_node(&post_process, "Yolov3PostProcess", input_addr);
 
-  post_process_node.SetInputQueue(&yolov3_post_input_queue);
+  if (!is_null_output) {
+    post_process_node.SetInputQueue(&yolov3_output_queue);
+    null_out_node.SetInputQueue(&dummy_output_queue);
+  } else {
+    post_process_node.SetInputQueue(&dummy_output_queue);
+    null_out_node.SetInputQueue(&yolov3_output_queue);
+  }
+
+  dummy_output_queue.ShutDown();
+
+  null_out_node.Start(ctx);
+
   ThreadSafeQueueWithCapacity<Yolov3PostProcess::OutTy>
       yolov3_post_output_queue(queue_size);
   post_process_node.SetOutputQueue(&yolov3_post_output_queue);
   post_process_node.Start(ctx);
 
   FFMPEGOutput ffmpeg_output;
-  if (camera_id < 0) {
-    ffmpeg_output.Init(output_addr, height, width, ffmpeg_input.GetFramerate());
-  } else {
-    ffmpeg_output.Init(output_addr, height, width, camera_input.GetFPS());
+  if (!is_null_output) {
+    if (camera_id < 0) {
+      ffmpeg_output.Init(output_addr, height, width,
+                         ffmpeg_input.GetFramerate());
+    } else {
+      ffmpeg_output.Init(output_addr, height, width, camera_input.GetFPS());
+    }
   }
 
   TaskNode<FFMPEGOutput, DeviceBufferPtr, void> ffmpeg_sw_output_node(
@@ -248,6 +270,7 @@ void Yolov3StreamThread(json config) {
 
   resize_engine_node.Join();
   yolov3_model_node.Join();
+  null_out_node.Join();
   post_process_node.Join();
   if (hardware_enc) {
     encoder_node.Join();
@@ -266,6 +289,7 @@ void Yolov3StreamThread(json config) {
   ffmpeg_output.Close();
 
   CHECK_ACL(aclrtUnSubscribeReport(cb_decoder_thread.GetPid(), decoder_stream));
+  CHECK_ACL(aclrtUnSubscribeReport(cb_encoder_thread.GetPid(), encoder_stream));
   std::cout << "End of stream input: " << input_addr << std::endl;
 }
 

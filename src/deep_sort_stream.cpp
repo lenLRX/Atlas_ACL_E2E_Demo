@@ -434,9 +434,10 @@ void DeepSortStreamThread(json config) {
   std::string output_addr = config.at("dst");
   std::string yolov3_model_path = config.at("yolov3_model_path");
   std::string deepsort_model_path = config.at("deepsort_model_path");
+  bool is_null_output = output_addr == "null";
   bool hardware_enc = false;
   if (config.count("hw_encoder")) {
-    hardware_enc = config.at("hw_encoder");
+    hardware_enc = config.at("hw_encoder") && (!is_null_output);
   }
 
   CHECK_ACL(aclrtSetDevice(0));
@@ -543,26 +544,49 @@ void DeepSortStreamThread(json config) {
   TaskNode<DeepSortTracker, DeepSortTracker::InTy, DeepSortTracker::OutTy>
       tracker_node(&tracker, "DeepSortTracker", input_addr);
   tracker_node.SetInputQueue(&deepsort_tracker_queue);
-  ThreadSafeQueueWithCapacity<DeepSortTracker::OutTy> deepsort_pp_queue(
+  ThreadSafeQueueWithCapacity<DeepSortTracker::OutTy> tracker_output_queue(
       queue_size);
-  tracker_node.SetOutputQueue(&deepsort_pp_queue);
+  tracker_node.SetOutputQueue(&tracker_output_queue);
   tracker_node.Start(ctx);
+
+  NullOutput<DeepSortPostProcess::InTy> null_out;
+  TaskNode<NullOutput<DeepSortPostProcess::InTy>, DeepSortPostProcess::InTy,
+           void>
+      null_out_node(&null_out, "NullOutput", input_addr);
+
+  ThreadSafeQueueWithCapacity<DeepSortTracker::OutTy> dummy_output_queue(
+      queue_size);
 
   DeepSortPostProcess deepsort_pp(width, height);
   TaskNode<DeepSortPostProcess, DeepSortPostProcess::InTy,
            DeepSortPostProcess::OutTy>
       deepsort_pp_node(&deepsort_pp, "DeepSortPostProcess", input_addr);
-  deepsort_pp_node.SetInputQueue(&deepsort_pp_queue);
+
+  if (!is_null_output) {
+    deepsort_pp_node.SetInputQueue(&tracker_output_queue);
+    null_out_node.SetInputQueue(&dummy_output_queue);
+  } else {
+    deepsort_pp_node.SetInputQueue(&dummy_output_queue);
+    null_out_node.SetInputQueue(&tracker_output_queue);
+  }
+
+  dummy_output_queue.ShutDown();
+
+  null_out_node.Start(ctx);
+
   ThreadSafeQueueWithCapacity<DeepSortPostProcess::OutTy> deepsort_output_queue(
       queue_size);
   deepsort_pp_node.SetOutputQueue(&deepsort_output_queue);
   deepsort_pp_node.Start(ctx);
 
   FFMPEGOutput ffmpeg_output;
-  if (camera_id < 0) {
-    ffmpeg_output.Init(output_addr, height, width, ffmpeg_input.GetFramerate());
-  } else {
-    ffmpeg_output.Init(output_addr, height, width, camera_input.GetFPS());
+  if (!is_null_output) {
+    if (camera_id < 0) {
+      ffmpeg_output.Init(output_addr, height, width,
+                         ffmpeg_input.GetFramerate());
+    } else {
+      ffmpeg_output.Init(output_addr, height, width, camera_input.GetFPS());
+    }
   }
 
   TaskNode<FFMPEGOutput, DeviceBufferPtr, void> ffmpeg_sw_output_node(
@@ -610,6 +634,7 @@ void DeepSortStreamThread(json config) {
   deepsort_crop_node.Join();
   tracker_node.Join();
   deepsort_model_node.Join();
+  null_out_node.Join();
   deepsort_pp_node.Join();
   if (hardware_enc) {
     encoder_node.Join();

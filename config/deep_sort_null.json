@@ -1,0 +1,17 @@
+{
+    "streams": [
+        {
+            "name": "deep_sort_demo_stream1",
+            "stream_type": "deep_sort_demo",
+            "src": "road_traffic_test1.mp4",
+            "dst": "null",
+            "hw_encoder": false,
+            "yolov3_model_path": "./model/sample-yolov3_pp_416.om",
+            "deepsort_model_path": "./model/deepsort_mars.om"
+        }
+    ],
+    "config": {
+        "app_perf": true,
+        "perflog_path": "."
+    }
+}
