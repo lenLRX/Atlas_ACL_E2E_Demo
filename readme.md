@@ -37,7 +37,6 @@
 
 ## TODO
 * 支持多batch，提升推理性能
-* 支持Atlas300I多device
 * 限制输出码率
 * 提升deepsort性能
 * 支持更多模型

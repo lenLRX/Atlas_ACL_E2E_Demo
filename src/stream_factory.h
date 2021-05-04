@@ -11,8 +11,8 @@ using json = nlohmann::json;
 
 class StreamFactory {
 public:
-  using FnTy = std::function<std::thread(json)>;
-  static std::thread MakeStream(json config);
+  using FnTy = std::function<std::thread(json, int)>;
+  static std::thread MakeStream(json config, int idx);
   static bool RegsiterStream(std::string name, FnTy make_fn);
   static StreamFactory &GetInstance();
 

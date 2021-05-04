@@ -18,8 +18,10 @@ std::vector<std::thread> CreateStreamByConfig(const json &jconfig) {
               << std::endl;
     exit(-1);
   }
+  int stream_id = 0;
   for (const json &jstream : jconfig) {
-    vec_threads.push_back(StreamFactory::MakeStream(jstream));
+    vec_threads.push_back(StreamFactory::MakeStream(jstream, stream_id));
+    ++stream_id;
   }
   return vec_threads;
 }
