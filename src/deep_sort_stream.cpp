@@ -5,6 +5,8 @@
 #include "acl_model.h"
 #include "app_profiler.h"
 #include "camera_input.h"
+#include "deep_sort_stream.h"
+#include "device_manager.h"
 #include "drawing.h"
 #include "dvpp_decoder.h"
 #include "dvpp_encoder.h"
@@ -17,8 +19,6 @@
 #include "util.h"
 #include "vpc_batch_crop.h"
 #include "vpc_resize.h"
-
-#include "deep_sort_stream.h"
 
 #define CHECK_PY_ERR(obj)                                                      \
   if (obj == NULL) {                                                           \
@@ -440,12 +440,10 @@ void DeepSortStreamThread(json config) {
     hardware_enc = config.at("hw_encoder") && (!is_null_output);
   }
 
-  CHECK_ACL(aclrtSetDevice(0));
   AclCallBackThread cb_decoder_thread(input_addr, "DVPP_DECODER");
   AclCallBackThread cb_encoder_thread(input_addr, "DVPP_ENCODER");
 
-  aclrtContext ctx;
-  CHECK_ACL(aclrtCreateContext(&ctx, 0));
+  aclrtContext ctx = DeviceManager::AllocateCtx();
   CHECK_ACL(aclrtSetCurrentContext(ctx));
   aclrtStream decoder_stream;
   CHECK_ACL(aclrtCreateStream(&decoder_stream));

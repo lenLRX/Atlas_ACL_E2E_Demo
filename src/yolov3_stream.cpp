@@ -15,6 +15,7 @@
 
 #include "acl_cb_thread.h"
 #include "app_profiler.h"
+#include "device_manager.h"
 #include "signal_handler.h"
 #include "stream_factory.h"
 #include "task_node.h"
@@ -112,12 +113,10 @@ void Yolov3StreamThread(json config) {
     hardware_enc = config.at("hw_encoder") && (!is_null_output);
   }
 
-  CHECK_ACL(aclrtSetDevice(0));
   AclCallBackThread cb_decoder_thread(input_addr, "DVPP_DECODER");
   AclCallBackThread cb_encoder_thread(input_addr, "DVPP_ENCODER");
 
-  aclrtContext ctx;
-  CHECK_ACL(aclrtCreateContext(&ctx, 0));
+  aclrtContext ctx = DeviceManager::AllocateCtx();
   CHECK_ACL(aclrtSetCurrentContext(ctx));
   aclrtStream decoder_stream;
   CHECK_ACL(aclrtCreateStream(&decoder_stream));

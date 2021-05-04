@@ -76,7 +76,8 @@ set(DEMO_LIB_SRC
         src/yolov3_stream.cpp
         src/signal_handler.cpp
         src/deep_sort_stream.cpp
-        src/stream_factory.cpp)
+        src/stream_factory.cpp
+        src/device_manager.cpp)
 
 add_library(acl_demo SHARED
         ${DEMO_LIB_SRC})
