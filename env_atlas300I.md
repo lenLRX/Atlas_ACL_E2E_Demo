@@ -5,8 +5,9 @@
 ## 配置apt源
 执行以下命令配置镜像源
 ```bash
-sudo sed -i "s@http://.*archive.ubuntu.com@http://repo.huaweicloud.com@g" /etc/apt/sources.list
-sudo sed -i "s@http://.*security.ubuntu.com@http://repo.huaweicloud.com@g" /etc/apt/sources.list
+sed -i "s@http://.*archive.ubuntu.com@http://repo.huaweicloud.com@g" /etc/apt/sources.list
+sed -i "s@http://.*security.ubuntu.com@http://repo.huaweicloud.com@g" /etc/apt/sources.list
+apt update
 ```
 ## 安装nginx和nginx-http-flv-module(可选)
 1. 将代码下载并解压到/root目录下，这里使用的代码为:[nginx](https://nginx.org/download/nginx-1.18.0.tar.gz), [nginx-http-flv-module](https://github.com/winshining/nginx-http-flv-module/archive/v1.2.8.tar.gz)
