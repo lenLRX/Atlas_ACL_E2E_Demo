@@ -58,8 +58,8 @@ void AppProfiler::SetLogDir(const std::string &logdir) {
 void AppProfiler::ShutDown() {
   auto &profiler = AppProfiler::GetInstance();
   if (AppProfiler::Active()) {
-    profiler.active = false;
     AppProfiler::RecordEvent({{"shutdown", true}});
+    profiler.active = false;
     profiler.worker_thread.join();
     std::cout << "AppProfiler shutdown" << std::endl;
   }
