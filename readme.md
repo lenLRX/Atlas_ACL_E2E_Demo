@@ -27,7 +27,7 @@
 
 ## 环境搭建
 * [环境搭建文档(Atlas200DK)](env_atlas200dk.md)
-* [环境搭建文档(Atlas300I)](env.md)
+* [环境搭建文档(Atlas300I)](env_atlas300I.md)
 ## YOLO V3 模型转换
 [yolov3 模型转换文档](yolov3_model_cvt.md)
 ## DeepSort 模型转换
@@ -37,7 +37,6 @@
 
 ## TODO
 * 支持多batch，提升推理性能
-* 支持Atlas300I多device
 * 限制输出码率
 * 提升deepsort性能
 * 支持更多模型

@@ -1,7 +1,7 @@
 # demo使用说明
 
 ## 运行demo方式
-执行一下命令运行demo
+执行以下命令运行demo
 ```
 ./run.sh config/yolov3_demo.json
 ```
@@ -48,7 +48,7 @@
     * 本地文件: ```output2.mp4```
   * dst: 输出路径
     * null: 当输出路径为```null```时，只做推理，不输出结果。
-  * hw_encoder: 是否开启硬件编码。注意:*一个进程中只能有一个流开启硬件编码*
+  * hw_encoder: 是否开启硬件编码。注意:<span style="color:red"><b>一个进程中只能有一个流开启硬件编码</b></span>
   * model_path: 模型的路径
 * config: 通用配置项
   * app_perf: 是否输出性能日志

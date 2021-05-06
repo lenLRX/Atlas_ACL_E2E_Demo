@@ -18,8 +18,10 @@ std::vector<std::thread> CreateStreamByConfig(const json &jconfig) {
               << std::endl;
     exit(-1);
   }
+  int stream_id = 0;
   for (const json &jstream : jconfig) {
-    vec_threads.push_back(StreamFactory::MakeStream(jstream));
+    vec_threads.push_back(StreamFactory::MakeStream(jstream, stream_id));
+    ++stream_id;
   }
   return vec_threads;
 }
@@ -27,6 +29,9 @@ std::vector<std::thread> CreateStreamByConfig(const json &jconfig) {
 int main(int argc, char **argv) {
   SingalHandler::RegisterSignal();
   CHECK_ACL(aclInit(nullptr));
+  uint32_t dev_count = 0;
+  CHECK_ACL(aclrtGetDeviceCount(&dev_count));
+  std::cout << "total dev count: " << dev_count << std::endl;
   if (argc != 3) {
     std::cerr << "invalid arguments!\n"
               << "usage: ./build/acl_demo_app -c config.json" << std::endl;

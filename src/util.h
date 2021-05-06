@@ -307,4 +307,10 @@ private:
   PyGILState_STATE gstate;
 };
 
+static std::string StreamName(const std::string addr, int id) {
+  std::stringstream ss;
+  ss << "stream[" << id << "] " << addr;
+  return ss.str();
+}
+
 #endif //__ACL_UTIL_H__

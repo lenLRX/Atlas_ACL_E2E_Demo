@@ -5,6 +5,8 @@
 #include "acl_model.h"
 #include "app_profiler.h"
 #include "camera_input.h"
+#include "deep_sort_stream.h"
+#include "device_manager.h"
 #include "drawing.h"
 #include "dvpp_decoder.h"
 #include "dvpp_encoder.h"
@@ -17,8 +19,6 @@
 #include "util.h"
 #include "vpc_batch_crop.h"
 #include "vpc_resize.h"
-
-#include "deep_sort_stream.h"
 
 #define CHECK_PY_ERR(obj)                                                      \
   if (obj == NULL) {                                                           \
@@ -429,7 +429,7 @@ DeepSortPostProcess::OutTy DeepSortPostProcess::Process(InTy input) {
   return image_buffer;
 }
 
-void DeepSortStreamThread(json config) {
+void DeepSortStreamThread(json config, int id) {
   std::string input_addr = config.at("src");
   std::string output_addr = config.at("dst");
   std::string yolov3_model_path = config.at("yolov3_model_path");
@@ -440,12 +440,12 @@ void DeepSortStreamThread(json config) {
     hardware_enc = config.at("hw_encoder") && (!is_null_output);
   }
 
-  CHECK_ACL(aclrtSetDevice(0));
-  AclCallBackThread cb_decoder_thread(input_addr, "DVPP_DECODER");
-  AclCallBackThread cb_encoder_thread(input_addr, "DVPP_ENCODER");
+  std::string stream_name = StreamName(input_addr, id);
 
-  aclrtContext ctx;
-  CHECK_ACL(aclrtCreateContext(&ctx, 0));
+  AclCallBackThread cb_decoder_thread(stream_name, "DVPP_DECODER");
+  AclCallBackThread cb_encoder_thread(stream_name, "DVPP_ENCODER");
+
+  aclrtContext ctx = DeviceManager::AllocateCtx();
   CHECK_ACL(aclrtSetCurrentContext(ctx));
   aclrtStream decoder_stream;
   CHECK_ACL(aclrtCreateStream(&decoder_stream));
@@ -478,7 +478,7 @@ void DeepSortStreamThread(json config) {
 
   DvppDecoder decoder;
   TaskNode<DvppDecoder, AVPacket, void> decoder_node(&decoder, "DvppDecoder",
-                                                     input_addr);
+                                                     stream_name);
   decoder_node.SetInputQueue(&decoder_input_queue);
 
   ThreadSafeQueueWithCapacity<DeviceBufferPtr> resize_input_queue(queue_size);
@@ -497,7 +497,7 @@ void DeepSortStreamThread(json config) {
   resize_engine.Init(height, width, yolov3_model_size, yolov3_model_size);
 
   TaskNode<VPCResizeEngine, DeviceBufferPtr, buf_tup_t> resize_engine_node(
-      &resize_engine, "VPCResizeEngine", input_addr);
+      &resize_engine, "VPCResizeEngine", stream_name);
   resize_engine_node.SetInputQueue(&resize_input_queue);
 
   ThreadSafeQueueWithCapacity<buf_tup_t> yolov3_input_queue(queue_size);
@@ -509,7 +509,7 @@ void DeepSortStreamThread(json config) {
   Yolov3Model yolov3_model(yolov3_model_path, yolov3_model_stream);
 
   TaskNode<Yolov3Model, Yolov3Model::InTy, Yolov3Model::OutTy>
-      yolov3_model_node(&yolov3_model, "Yolov3Model", input_addr);
+      yolov3_model_node(&yolov3_model, "Yolov3Model", stream_name);
 
   yolov3_model_node.SetInputQueue(&yolov3_input_queue);
 
@@ -522,7 +522,7 @@ void DeepSortStreamThread(json config) {
   DeepSortCropProcess deepsort_crop(deepsort_crop_stream, width, height);
   TaskNode<DeepSortCropProcess, DeepSortCropProcess::InTy,
            DeepSortCropProcess::OutTy>
-      deepsort_crop_node(&deepsort_crop, "DeepSortCrop", input_addr);
+      deepsort_crop_node(&deepsort_crop, "DeepSortCrop", stream_name);
   deepsort_crop_node.SetInputQueue(&crop_input_queue);
   ThreadSafeQueueWithCapacity<DeepSortCropProcess::OutTy> tracker_input_queue(
       queue_size);
@@ -533,7 +533,7 @@ void DeepSortStreamThread(json config) {
   CHECK_ACL(aclrtCreateStream(&deepsort_stream));
   DeepSortModel deepsort_model(deepsort_model_path, deepsort_stream);
   TaskNode<DeepSortModel, DeepSortModel::InTy, DeepSortModel::OutTy>
-      deepsort_model_node(&deepsort_model, "DeepSortModel", input_addr);
+      deepsort_model_node(&deepsort_model, "DeepSortModel", stream_name);
   deepsort_model_node.SetInputQueue(&tracker_input_queue);
   ThreadSafeQueueWithCapacity<DeepSortModel::OutTy> deepsort_tracker_queue(
       queue_size);
@@ -542,7 +542,7 @@ void DeepSortStreamThread(json config) {
 
   DeepSortTracker tracker;
   TaskNode<DeepSortTracker, DeepSortTracker::InTy, DeepSortTracker::OutTy>
-      tracker_node(&tracker, "DeepSortTracker", input_addr);
+      tracker_node(&tracker, "DeepSortTracker", stream_name);
   tracker_node.SetInputQueue(&deepsort_tracker_queue);
   ThreadSafeQueueWithCapacity<DeepSortTracker::OutTy> tracker_output_queue(
       queue_size);
@@ -552,7 +552,7 @@ void DeepSortStreamThread(json config) {
   NullOutput<DeepSortPostProcess::InTy> null_out;
   TaskNode<NullOutput<DeepSortPostProcess::InTy>, DeepSortPostProcess::InTy,
            void>
-      null_out_node(&null_out, "NullOutput", input_addr);
+      null_out_node(&null_out, "NullOutput", stream_name);
 
   ThreadSafeQueueWithCapacity<DeepSortTracker::OutTy> dummy_output_queue(
       queue_size);
@@ -560,7 +560,7 @@ void DeepSortStreamThread(json config) {
   DeepSortPostProcess deepsort_pp(width, height);
   TaskNode<DeepSortPostProcess, DeepSortPostProcess::InTy,
            DeepSortPostProcess::OutTy>
-      deepsort_pp_node(&deepsort_pp, "DeepSortPostProcess", input_addr);
+      deepsort_pp_node(&deepsort_pp, "DeepSortPostProcess", stream_name);
 
   if (!is_null_output) {
     deepsort_pp_node.SetInputQueue(&tracker_output_queue);
@@ -590,14 +590,14 @@ void DeepSortStreamThread(json config) {
   }
 
   TaskNode<FFMPEGOutput, DeviceBufferPtr, void> ffmpeg_sw_output_node(
-      &ffmpeg_output, "FFMPEGSoftwareOutput", input_addr);
+      &ffmpeg_output, "FFMPEGSoftwareOutput", stream_name);
 
   TaskNode<FFMPEGOutput, DvppEncoder::OutTy, void> ffmpeg_hw_output_node(
-      &ffmpeg_output, "FFMPEGHardwareOutput", input_addr);
+      &ffmpeg_output, "FFMPEGHardwareOutput", stream_name);
 
   DvppEncoder encoder;
   TaskNode<DvppEncoder, DeviceBufferPtr, void> encoder_node(
-      &encoder, "DvppEncoder", input_addr);
+      &encoder, "DvppEncoder", stream_name);
   ThreadSafeQueueWithCapacity<DvppEncoder::OutTy> encoder_output_queue(
       queue_size);
   if (hardware_enc) {
@@ -614,7 +614,7 @@ void DeepSortStreamThread(json config) {
 
   if (camera_id < 0) {
     TaskNode<FFMPEGInput, void, void> ffmpeg_input_node(
-        &ffmpeg_input, "FFMPEGInput", input_addr);
+        &ffmpeg_input, "FFMPEGInput", stream_name);
     ffmpeg_input.SetOutputQueue(&decoder_input_queue);
     SingalHandler::Register([&]() { ffmpeg_input.Stop(); });
     ffmpeg_input_node.Start(ctx);
@@ -622,7 +622,7 @@ void DeepSortStreamThread(json config) {
     decoder.ShutDown();
   } else {
     TaskNode<CameraInput, void, void> camera_input_node(
-        &camera_input, "CameraInput", input_addr);
+        &camera_input, "CameraInput", stream_name);
     camera_input.SetOutputQueue(&resize_input_queue);
     SingalHandler::Register([&]() { camera_input.Stop(); });
     camera_input_node.Start(ctx);
@@ -654,11 +654,9 @@ void DeepSortStreamThread(json config) {
 
   CHECK_ACL(aclrtUnSubscribeReport(cb_decoder_thread.GetPid(), decoder_stream));
   CHECK_ACL(aclrtUnSubscribeReport(cb_encoder_thread.GetPid(), encoder_stream));
-  std::cout << "End of stream input: " << input_addr << std::endl;
+  std::cout << "End of stream input: " << stream_name << std::endl;
 }
 
-std::thread MakeDeepSortStream(json config) {
-  return std::thread(DeepSortStreamThread, config);
-}
-
-REGSITER_STREAM(deep_sort_demo, MakeDeepSortStream);
+REGSITER_STREAM(deep_sort_demo, [](json config, int id)->std::thread {
+  return std::thread(DeepSortStreamThread, config, id);
+});
