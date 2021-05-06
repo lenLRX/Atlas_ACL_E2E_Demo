@@ -72,10 +72,58 @@ ACLModel::DevBufferVec ACLModel::Infer(const DevBufferVec &inputs) {
     CHECK_ACL(aclrtSynchronizeStream(stream));
   }
 
+  for (size_t i = 0; i < model_input_num; ++i) {
+    CHECK_ACL(aclDestroyDataBuffer(aclmdlGetDatasetBuffer(input_dataset, i)));
+  }
+
+  for (size_t i = 0; i < model_output_num; ++i) {
+    CHECK_ACL(aclDestroyDataBuffer(aclmdlGetDatasetBuffer(output_dataset, i)));
+  }
+
   CHECK_ACL(aclmdlDestroyDataset(input_dataset));
   CHECK_ACL(aclmdlDestroyDataset(output_dataset));
 
   return result;
+}
+
+void ACLModel::Infer(const DevBufferVec &inputs, const DevBufferVec &outputs) {
+  aclmdlDataset *input_dataset = aclmdlCreateDataset();
+  aclmdlDataset *output_dataset = aclmdlCreateDataset();
+
+  size_t model_input_num = aclmdlGetNumInputs(model_desc);
+  size_t model_output_num = aclmdlGetNumOutputs(model_desc);
+
+  for (size_t i = 0; i < model_input_num; ++i) {
+    size_t buffer_size = aclmdlGetInputSizeByIndex(model_desc, i);
+    aclDataBuffer *input_databuffer =
+        aclCreateDataBuffer(inputs[i]->GetDevicePtr(), buffer_size);
+    CHECK_ACL(aclmdlAddDatasetBuffer(input_dataset, input_databuffer));
+  }
+
+  for (size_t i = 0; i < model_output_num; ++i) {
+    size_t buffer_size = aclmdlGetOutputSizeByIndex(model_desc, i);
+    aclDataBuffer *output_databuffer =
+        aclCreateDataBuffer(outputs[i]->GetDevicePtr(), buffer_size);
+    CHECK_ACL(aclmdlAddDatasetBuffer(output_dataset, output_databuffer));
+  }
+
+  {
+    APP_PROFILE(aclmdlExecuteAsync);
+    CHECK_ACL(
+        aclmdlExecuteAsync(model_id, input_dataset, output_dataset, stream));
+    CHECK_ACL(aclrtSynchronizeStream(stream));
+  }
+
+  for (size_t i = 0; i < model_input_num; ++i) {
+    CHECK_ACL(aclDestroyDataBuffer(aclmdlGetDatasetBuffer(input_dataset, i)));
+  }
+
+  for (size_t i = 0; i < model_output_num; ++i) {
+    CHECK_ACL(aclDestroyDataBuffer(aclmdlGetDatasetBuffer(output_dataset, i)));
+  }
+
+  CHECK_ACL(aclmdlDestroyDataset(input_dataset));
+  CHECK_ACL(aclmdlDestroyDataset(output_dataset));
 }
 
 const std::vector<size_t> &ACLModel::GetInputBufferSizes() {

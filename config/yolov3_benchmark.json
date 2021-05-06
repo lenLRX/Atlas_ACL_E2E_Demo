@@ -1,0 +1,29 @@
+{
+    "tests": [
+        {
+            "test_model": "model/sample-yolov3_pp_416_auto_tune.om",
+            "batch_size": 1
+        },
+        {
+            "test_model": "model/sample-yolov3_pp_416_bs2.om",
+            "batch_size": 2
+        },
+        {
+            "test_model": "model/sample-yolov3_pp_416_bs4_auto_tune.om",
+            "batch_size": 4
+        },
+        {
+            "test_model": "model/sample-yolov3_pp_416_bs8_auto_tune.om",
+            "batch_size": 8
+        },
+        {
+            "test_model": "model/sample-yolov3_pp_416_bs16_auto_tune.om",
+            "batch_size": 16
+        },
+        {
+            "test_model": "model/sample-yolov3_pp_416_bs32_auto_tune.om",
+            "batch_size": 32
+        }
+    ],
+    "test_iter" : 100000000
+}

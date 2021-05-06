@@ -116,3 +116,10 @@ add_executable(acl_demo_app
 
 target_link_libraries(acl_demo_app
         acl_demo)
+
+add_executable(benchmark_demo
+        src/benchmark_demo.cpp)
+
+target_link_libraries(benchmark_demo
+        acl_demo)
+

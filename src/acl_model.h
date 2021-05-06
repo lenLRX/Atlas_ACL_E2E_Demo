@@ -77,6 +77,7 @@ public:
   ACLModel(aclrtStream stream);
   aclError Init(const char *model_path);
   DevBufferVec Infer(const DevBufferVec &inputs);
+  void Infer(const DevBufferVec &inputs, const DevBufferVec &outputs);
   const std::vector<size_t> &GetInputBufferSizes();
   const std::vector<size_t> &GetOutputBufferSizes();
   std::string ToString();

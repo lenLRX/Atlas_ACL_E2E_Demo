@@ -72,7 +72,9 @@ bool AppProfiler::Active() {
 
 void AppProfiler::RecordEvent(json jevent) {
   auto &profiler = AppProfiler::GetInstance();
-  profiler.queue.push(jevent);
+  if (AppProfiler::Active()) {
+    profiler.queue.push(jevent);
+  }
 }
 
 AppProfiler &AppProfiler::GetInstance() {
