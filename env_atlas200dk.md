@@ -146,6 +146,20 @@ chmod +x Ascend-cann-nnrt_3.3.0.alpha006_linux-aarch64.run
 cd run_package/
 ./Ascend-acllib-1.78.t3.0.b030-linux.aarch64.run --full
 ```
+### 5.x及以后的版本
+以下操作使用root用户执行
+
+将Ascend-cann-nnrt_*-aarch64.run传到/root目录下,首先解压:
+```
+chmod +x Ascend-cann-nnrt_*-aarch64.run
+./Ascend-cann-nnrt_*-aarch64.run --extract=. --noexec
+```
+然后安装acllib
+```
+cd run_package/
+./Ascend-acllib-*.aarch64.run --full
+```
+
 ## 安装demo
 ### 安装依赖
 使用root用户安装以下依赖：
