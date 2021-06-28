@@ -74,6 +74,7 @@ set(DEMO_LIB_SRC
         src/camera_input.cpp
         src/app_profiler.cpp
         src/yolov3_stream.cpp
+        src/yolov4_stream.cpp
         src/signal_handler.cpp
         src/deep_sort_stream.cpp
         src/stream_factory.cpp

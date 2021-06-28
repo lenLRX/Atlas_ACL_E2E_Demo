@@ -1,0 +1,16 @@
+{
+    "streams": [
+        {
+            "name": "yolov4_demo_stream1",
+            "stream_type": "yolov4_demo",
+            "src": "freecar.mp4",
+            "dst": "freecar_yolov4.mp4",
+            "hw_encoder": true,
+            "yolov4_model_path": "./model/yolov4_1_3_416_416_aipp.om"
+        }
+    ],
+    "config": {
+        "app_perf": true,
+        "perflog_path": "."
+    }
+}

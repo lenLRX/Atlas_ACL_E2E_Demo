@@ -294,6 +294,6 @@ void Yolov3StreamThread(json config, int id) {
   std::cout << "End of stream input: " << stream_name << std::endl;
 }
 
-REGSITER_STREAM(yolov3_demo, [](json config, int id)->std::thread {
+REGSITER_STREAM(yolov3_demo, [](json config, int id) -> std::thread {
   return std::thread(Yolov3StreamThread, config, id);
 });

@@ -657,6 +657,6 @@ void DeepSortStreamThread(json config, int id) {
   std::cout << "End of stream input: " << stream_name << std::endl;
 }
 
-REGSITER_STREAM(deep_sort_demo, [](json config, int id)->std::thread {
+REGSITER_STREAM(deep_sort_demo, [](json config, int id) -> std::thread {
   return std::thread(DeepSortStreamThread, config, id);
 });
