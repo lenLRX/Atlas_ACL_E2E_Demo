@@ -8,6 +8,7 @@
     * DVPP resize
 * [ACL yolov3+deepsort推理](deepsort.md)
     * DVPP crop resize
+* ACL yolov4推理
 * 在YUV420SP图像上的[画框](src/drawing.h)和[中文字符显示](src/freetype_helper.cpp)
 * [性能分析](profiling.md)
 
@@ -31,6 +32,8 @@
 * [环境搭建文档(Atlas300I)](env_atlas300I.md)
 ## YOLO V3 模型转换
 [yolov3 模型转换文档](yolov3_model_cvt.md)
+## YOLO V4 模型转换
+[yolov4 模型转换文档](yolov4_model_cvt.md)
 ## DeepSort 模型转换
 [deepsort 模型转换文档](deep_sort_model_cvt.md)
 ## 运行测试
