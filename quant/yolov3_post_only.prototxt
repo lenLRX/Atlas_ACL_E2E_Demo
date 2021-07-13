@@ -1,0 +1,93 @@
+layer {
+	bottom: "layer82-conv"
+	top: "yolo1_coords"
+	top: "yolo1_obj"
+	top: "yolo1_classes"
+	name: "yolo1"
+	type: "Yolo"
+	yolo_param {
+		boxes: 3
+		coords: 4
+		classes: 80
+		yolo_version: "V3"
+		softmax: true
+		background: false
+    }
+}
+layer {
+	bottom: "layer94-conv"
+	top: "yolo2_coords"
+	top: "yolo2_obj"
+	top: "yolo2_classes"
+	name: "yolo2"
+	type: "Yolo"
+	yolo_param {
+		boxes: 3
+		coords: 4
+		classes: 80
+		yolo_version: "V3"
+		softmax: true
+		background: false
+	}
+}
+
+layer {
+	bottom: "layer106-conv"
+	top: "yolo3_coords"
+	top: "yolo3_obj"
+	top: "yolo3_classes"
+	name: "yolo3"
+	type: "Yolo"
+	yolo_param {
+		boxes: 3
+		coords: 4
+		classes: 80
+		yolo_version: "V3"
+		softmax: true
+		background: false
+	}
+}
+layer {
+       name: "detection_out3"
+       type: "YoloV3DetectionOutput"
+       bottom: "yolo1_coords"
+       bottom: "yolo2_coords"
+       bottom: "yolo3_coords"
+       bottom: "yolo1_obj"
+       bottom: "yolo2_obj"
+       bottom: "yolo3_obj"
+       bottom: "yolo1_classes"
+       bottom: "yolo2_classes"
+       bottom: "yolo3_classes"
+       bottom: "img_info"
+       top: "box_out"
+       top: "box_out_num"
+       yolov3_detection_output_param {
+                           boxes: 3
+                           classes: 80
+                           relative: true
+                           obj_threshold: 0.5
+                           score_threshold: 0.5
+                           iou_threshold: 0.45
+                           pre_nms_topn: 512
+                           post_nms_topn: 1024
+                           biases_high: 10
+                           biases_high: 13
+                           biases_high: 16
+                           biases_high: 30
+                           biases_high: 33
+                           biases_high: 23
+                           biases_mid: 30
+                           biases_mid: 61
+                           biases_mid: 62
+                           biases_mid: 45
+                           biases_mid: 59
+                           biases_mid: 119
+                           biases_low: 116
+                           biases_low: 90
+                           biases_low: 156
+                           biases_low: 198
+                           biases_low: 373
+                           biases_low: 326
+       }
+}
