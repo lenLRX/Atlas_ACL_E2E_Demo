@@ -6,6 +6,7 @@
 * DVPP H264编码
 * ACL yolov3推理
     * DVPP resize
+* [AMCT yolov3 int8 量化](quant/caffe_quant.md)
 * [ACL yolov3+deepsort推理](deepsort.md)
     * DVPP crop resize
 * ACL yolov4推理
