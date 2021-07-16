@@ -1,0 +1,53 @@
+{
+    "test_iter": 100,
+    "tests": [
+        {
+            "test_model": "model/amct_yolov3_int8_pp_416_bs_1.om",
+            "batch_size": 1
+        },
+        {
+            "test_model": "model/amct_yolov3_int8_pp_416_bs_2.om",
+            "batch_size": 2
+        },
+        {
+            "test_model": "model/amct_yolov3_int8_pp_416_bs_4.om",
+            "batch_size": 4
+        },
+        {
+            "test_model": "model/amct_yolov3_int8_pp_416_bs_8.om",
+            "batch_size": 8
+        },
+        {
+            "test_model": "model/amct_yolov3_int8_pp_416_bs_16.om",
+            "batch_size": 16
+        },
+        {
+            "test_model": "model/amct_yolov3_int8_pp_416_bs_32.om",
+            "batch_size": 32
+        },
+        {
+            "test_model": "model/sample-yolov3_pp_416_bs1.om",
+            "batch_size": 1
+        },
+        {
+            "test_model": "model/sample-yolov3_pp_416_bs2.om",
+            "batch_size": 2
+        },
+        {
+            "test_model": "model/sample-yolov3_pp_416_bs4.om",
+            "batch_size": 4
+        },
+        {
+            "test_model": "model/sample-yolov3_pp_416_bs8.om",
+            "batch_size": 8
+        },
+        {
+            "test_model": "model/sample-yolov3_pp_416_bs16.om",
+            "batch_size": 16
+        },
+        {
+            "test_model": "model/sample-yolov3_pp_416_bs32.om",
+            "batch_size": 32
+        }
+    ]
+}
