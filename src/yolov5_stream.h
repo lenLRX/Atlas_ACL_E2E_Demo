@@ -12,7 +12,6 @@
 
 using json = nlohmann::json;
 
-// use aicore aipp to convert YUV420SP to RGB
 class Yolov5PreProcess {
 public:
   // input type: <raw image, resized image (YUV420SP)>
@@ -20,13 +19,16 @@ public:
   // output type: <raw image, resized image (RGB)>
   using OutTy = std::tuple<DeviceBufferPtr, DeviceBufferPtr>;
 
-  Yolov5PreProcess(int w, int h);
+  Yolov5PreProcess(int w, int h, bool enable_neon);
 
   OutTy Process(InTy bufferx2);
+  OutTy ProcessWithNeon(InTy input);
+  OutTy ProcessWithoutNeon(InTy input);
 
 private:
   int width;
   int height;
+  bool enable_neon;
 };
 
 class Yolov5Model {
