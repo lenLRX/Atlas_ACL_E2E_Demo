@@ -9,7 +9,7 @@
             "model_width" : 640,
             "hw_encoder": true,
             "enable_neon": true,
-            "yolov5_model_path": "./model/yolov5s_wo_slice_640.om"
+            "yolov5_model_path": "./model/yolov5s_truncate.om"
         }
     ],
     "config": {
