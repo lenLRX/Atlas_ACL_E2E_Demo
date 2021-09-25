@@ -164,7 +164,13 @@ cd run_package/
 ### 安装依赖
 使用root用户安装以下依赖：
 ```
-apt install cmake git libopencv-dev fonts-droid-fallback libfreetype6-dev libspdlog-dev nlohmann-json-dev python3-dev python3-sklearn python3-numpy python3-opencv
+apt install cmake git libopencv-dev fonts-droid-fallback libfreetype6-dev libspdlog-dev nlohmann-json-dev python3-dev python3-sklearn python3-numpy python3-opencv python3-pip
+```
+使用root用户安装pytorch-cpu:
+```
+pip3 install -i https://pypi.tuna.tsinghua.edu.cn/simple pip --upgrade
+pip3 config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
+python3 -m pip install torch torchvision numpy --upgrade
 ```
 ### 下载并编译
 <b>以下操作使用HwHiAiUser账户</b>
