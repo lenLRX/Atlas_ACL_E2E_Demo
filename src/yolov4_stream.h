@@ -32,12 +32,16 @@ public:
   // input type: <<confs, box info>, raw image>
   using InTy = std::tuple<ACLModel::DevBufferVec, DeviceBufferPtr>;
   using OutTy = DeviceBufferPtr;
-  Yolov4PostProcess(int width, int height);
+  Yolov4PostProcess(int width, int height,
+                    int model_width, int model_height,
+                    int box_num, int class_num);
   OutTy Process(InTy input);
 
 private:
   int width;
   int height;
+  int box_num;
+  int class_num;
   float h_ratio;
   float w_ratio;
 };

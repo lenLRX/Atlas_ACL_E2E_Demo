@@ -81,7 +81,6 @@ private:
 
 using namespace std::chrono_literals;
 
-const static int yolov4_model_size = 416;
 
 Yolov4Model::Yolov4Model(const std::string &path, aclrtStream stream)
     : yolov4_model(stream), model_stream(stream) {
@@ -96,10 +95,12 @@ Yolov4Model::OutTy Yolov4Model::Process(Yolov4Model::InTy bufferx2) {
   return {output_buffers, std::get<0>(bufferx2)};
 }
 
-Yolov4PostProcess::Yolov4PostProcess(int width, int height)
-    : width(width), height(height) {
-  h_ratio = height / (float)yolov4_model_size;
-  w_ratio = width / (float)yolov4_model_size;
+Yolov4PostProcess::Yolov4PostProcess(int width, int height,
+                                     int model_width, int model_height,
+                                     int box_num, int class_num)
+    : width(width), height(height), box_num(box_num), class_num(class_num) {
+  h_ratio = height / (float)model_height;
+  w_ratio = width / (float)model_width;
 }
 
 Yolov4PostProcess::OutTy Yolov4PostProcess::Process(InTy input) {
@@ -113,14 +114,14 @@ Yolov4PostProcess::OutTy Yolov4PostProcess::Process(InTy input) {
 
   PyGILGuard py_gil_guard;
 
-  npy_intp confs_dim[3] = {1, 10647, 80};
+  npy_intp confs_dim[3] = {1, box_num, class_num};
   const int confs_nd = 3;
 
   PyObject *confs_arr =
       PyArray_SimpleNewFromData(confs_nd, confs_dim, NPY_FLOAT32, confs);
   PyArray_CLEARFLAGS((PyArrayObject *)confs_arr, NPY_ARRAY_OWNDATA);
 
-  npy_intp boxes_dim[4] = {1, 10647, 1, 4};
+  npy_intp boxes_dim[4] = {1, box_num, 1, 4};
   const int boxes_nd = 4;
 
   PyObject *boxes_arr =
@@ -193,6 +194,10 @@ void Yolov4StreamThread(json config, int id) {
   std::string input_addr = config.at("src");
   std::string output_addr = config.at("dst");
   std::string model_path = config.at("yolov4_model_path");
+  int model_height = config.at("model_height");
+  int model_width = config.at("model_width");
+  int box_num = config.at("model_box_num");
+  int class_num = config.at("model_class_num");
   bool is_null_output = output_addr == "null";
   bool hardware_enc = false;
   if (config.count("hw_encoder")) {
@@ -253,7 +258,7 @@ void Yolov4StreamThread(json config, int id) {
   aclrtStream resize_stream;
   CHECK_ACL(aclrtCreateStream(&resize_stream));
   VPCResizeEngine resize_engine(resize_stream);
-  resize_engine.Init(height, width, yolov4_model_size, yolov4_model_size);
+  resize_engine.Init(height, width, model_height, model_width);
 
   TaskNode<VPCResizeEngine, DeviceBufferPtr, buf_tup_t> resize_engine_node(
       &resize_engine, "VPCResizeEngine", stream_name);
@@ -284,7 +289,9 @@ void Yolov4StreamThread(json config, int id) {
   ThreadSafeQueueWithCapacity<Yolov4Model::OutTy> dummy_output_queue(
       queue_size);
 
-  Yolov4PostProcess post_process(width, height);
+  Yolov4PostProcess post_process(width, height,
+                                 model_width, model_height,
+                                 box_num, class_num);
   TaskNode<Yolov4PostProcess, Yolov4PostProcess::InTy, Yolov4PostProcess::OutTy>
       post_process_node(&post_process, "Yolov4PostProcess", stream_name);
 

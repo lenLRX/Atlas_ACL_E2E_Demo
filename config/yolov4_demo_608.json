@@ -5,12 +5,12 @@
             "stream_type": "yolov4_demo",
             "src": "freecar.mp4",
             "dst": "freecar_yolov4.mp4",
-            "model_height" : 416,
-            "model_width" : 416,
-            "model_box_num" : 10647, 
+            "model_height" : 608,
+            "model_width" : 608,
+            "model_box_num" : 22743, 
             "model_class_num" : 80,
             "hw_encoder": true,
-            "yolov4_model_path": "./model/yolov4_1_3_416_416_aipp.om"
+            "yolov4_model_path": "./model/yolov4_1_3_608_608_aipp.om"
         }
     ],
     "config": {
