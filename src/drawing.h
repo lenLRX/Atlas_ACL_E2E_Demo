@@ -31,6 +31,14 @@ public:
     RenderText(x, y, text, &color, this);
   }
 
+  inline int InTheBoxX(int x) {
+    return std::max(std::min(x, img_w), 0);
+  }
+
+  inline int InTheBoxY(int y) {
+    return std::max(std::min(y, img_h), 0);
+  }
+
   void DrawRect(int x1, int y1, int x2, int y2, const YUVColor &color,
                 int width) {
     if (x1 > x2) {
@@ -40,6 +48,11 @@ public:
     if (y1 > y2) {
       std::swap(y1, y2);
     }
+
+    x1 = InTheBoxX(x1);
+    x2 = InTheBoxX(x2);
+    y1 = InTheBoxY(y1);
+    y2 = InTheBoxY(y2);
 
     int i, j;
     int i_bound, j_bound;
@@ -89,6 +102,12 @@ public:
   }
 
   inline void SetPixel(int h, int w, const YUVColor &color) {
+    if (h < 0 || h > img_h) {
+      return;
+    }
+    if (w < 0 || w > img_w) {
+      return;
+    }
     *(y_addr + h * img_w) = color.y;
     uint8_t *uv_offset = uv_addr + (h / 2) * img_w + w / 2 * 2;
     uv_offset[0] = color.u;
