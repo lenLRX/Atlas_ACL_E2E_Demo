@@ -24,9 +24,11 @@ static void DvppDecCallback(acldvppStreamDesc *input, acldvppPicDesc *output,
 
   ctx->decoder->GetOutputQueue()->push(host_output_buffer);
 
-  void* input_ptr = acldvppGetStreamDescData(input);
-  if (input_ptr != nullptr) {
-    DevMemPool::FreeDvppMem(input_ptr);
+  if (!IsDeviceMode()) {
+    void *input_ptr = acldvppGetStreamDescData(input);
+    if (input_ptr != nullptr) {
+      DevMemPool::FreeDvppMem(input_ptr);
+    }
   }
 
   av_packet_unref((AVPacket *)ctx->pkt);

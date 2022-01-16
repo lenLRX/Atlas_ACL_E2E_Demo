@@ -3,8 +3,8 @@
 
 #include "acl/acl.h"
 
-#include "util.h"
 #include "dev_mem_pool.h"
+#include "util.h"
 
 #include <functional>
 #include <memory>
@@ -62,7 +62,7 @@ public:
   static DeleteFn DvppMemDeleter() {
     return [](void *dev_ptr) { DevMemPool::FreeDvppMem(dev_ptr); };
   }
-  
+
 private:
   void *host_buffer;
   void *device_buffer;

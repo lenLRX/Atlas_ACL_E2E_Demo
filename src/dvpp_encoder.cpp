@@ -101,7 +101,7 @@ aclError DvppEncoder::Init(const pthread_t thread_id, int h, int w) {
   CHECK_ACL(aclvencSetChannelDescPicHeight(channel_desc, h));
   CHECK_ACL(aclvencSetChannelDescPicWidth(channel_desc, w));
   CHECK_ACL(aclvencSetChannelDescKeyFrameInterval(channel_desc, 12));
-  //CHECK_ACL(aclvencSetChannelDescMaxBitRate(channel_desc, 100));
+  // CHECK_ACL(aclvencSetChannelDescMaxBitRate(channel_desc, 100));
 
   CHECK_ACL(aclvencCreateChannel(channel_desc));
 

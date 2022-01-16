@@ -31,13 +31,9 @@ public:
     RenderText(x, y, text, &color, this);
   }
 
-  inline int InTheBoxX(int x) {
-    return std::max(std::min(x, img_w), 0);
-  }
+  inline int InTheBoxX(int x) { return std::max(std::min(x, img_w), 0); }
 
-  inline int InTheBoxY(int y) {
-    return std::max(std::min(y, img_h), 0);
-  }
+  inline int InTheBoxY(int y) { return std::max(std::min(y, img_h), 0); }
 
   void DrawRect(int x1, int y1, int x2, int y2, const YUVColor &color,
                 int width) {

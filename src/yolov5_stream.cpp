@@ -1,14 +1,14 @@
 #include "numpy/ndarrayobject.h"
 #include "numpy/ndarraytypes.h"
 
-#include <opencv2/imgproc.hpp>
 #include <opencv2/imgcodecs.hpp>
+#include <opencv2/imgproc.hpp>
 
 #include <chrono>
+#include <fstream>
 #include <iostream>
 #include <string>
 #include <thread>
-#include <fstream>
 
 #include "acl_model.h"
 #include "camera_input.h"
@@ -22,12 +22,12 @@
 
 #include "acl_cb_thread.h"
 #include "app_profiler.h"
+#include "dev_mem_pool.h"
 #include "device_manager.h"
 #include "signal_handler.h"
 #include "stream_factory.h"
 #include "task_node.h"
 #include "yolov5_stream.h"
-#include "dev_mem_pool.h"
 
 #define CHECK_PY_ERR(obj)                                                      \
   if (obj == NULL) {                                                           \
@@ -87,12 +87,10 @@ private:
 using namespace std::chrono_literals;
 
 Yolov5PreProcess::Yolov5PreProcess(int w, int h, bool enable_neon)
-:width(w), height(h), enable_neon(enable_neon) {
+    : width(w), height(h), enable_neon(enable_neon) {}
 
-}
-
-template<typename T>
-void FocusTransform(int height, int width, T* dst, T* src) {
+template <typename T>
+void FocusTransform(int height, int width, T *dst, T *src) {
   APP_PROFILE(FocusTransform);
   // (h, w, 3) to (3*4, h/2, w/2)
   int dst_plane_size = height * width / 4;
@@ -100,43 +98,44 @@ void FocusTransform(int height, int width, T* dst, T* src) {
   int dst_row_size = width / 2;
   int half_row = width / 2;
   int half_height = height / 2;
-  for (int i = 0;i < height; ++i) {
+  for (int i = 0; i < height; ++i) {
     int row_off = i % 2;
     int dst_even_offset = row_off * 3 * dst_plane_size + dst_row_size * (i / 2);
-    T* dst_even = dst + dst_even_offset;
-    int dst_odd_offset = (row_off + 2) * 3 * dst_plane_size + dst_row_size * (i / 2);
-    T* dst_odd = dst + dst_odd_offset;
-    T* src_row = src + i * src_row_size;
+    T *dst_even = dst + dst_even_offset;
+    int dst_odd_offset =
+        (row_off + 2) * 3 * dst_plane_size + dst_row_size * (i / 2);
+    T *dst_odd = dst + dst_odd_offset;
+    T *src_row = src + i * src_row_size;
     for (int j = 0; j < half_row; ++j) {
       dst_even[j] = *src_row;
       ++src_row;
       dst_even[j + dst_plane_size] = *src_row;
       ++src_row;
-      dst_even[j + 2*dst_plane_size] = *src_row;
+      dst_even[j + 2 * dst_plane_size] = *src_row;
       ++src_row;
 
       dst_odd[j] = *src_row;
       ++src_row;
       dst_odd[j + dst_plane_size] = *src_row;
       ++src_row;
-      dst_odd[j + 2*dst_plane_size] = *src_row;
+      dst_odd[j + 2 * dst_plane_size] = *src_row;
       ++src_row;
     }
   }
-  //std::ofstream ofs("focus.bin", std::ios::binary | std::ios::out);
-  //ofs.write((const char*)dst, height * width * 3 * sizeof(T));
+  // std::ofstream ofs("focus.bin", std::ios::binary | std::ios::out);
+  // ofs.write((const char*)dst, height * width * 3 * sizeof(T));
 }
 
-void FocusTransformNEON(int height, int width, uint8_t* dst, uint8_t* src);
+void FocusTransformNEON(int height, int width, uint8_t *dst, uint8_t *src);
 
-void FocusTransformNEONFuse(int height, int width, float* dst, uint8_t* src);
+void FocusTransformNEONFuse(int height, int width, float *dst, uint8_t *src);
 
-void CvtFocusNEONFuse(int height, int width, float* dst, uint8_t* src);
+void CvtFocusNEONFuse(int height, int width, float *dst, uint8_t *src);
 
-void YUV420SP2RGBNEON(int height, int width, uint8_t* dst, uint8_t* src);
+void YUV420SP2RGBNEON(int height, int width, uint8_t *dst, uint8_t *src);
 
-
-Yolov5PreProcess::OutTy Yolov5PreProcess::Process(Yolov5PreProcess::InTy bufferx2) {
+Yolov5PreProcess::OutTy
+Yolov5PreProcess::Process(Yolov5PreProcess::InTy bufferx2) {
 #ifdef __ARM_NEON
   const bool has_neon = true;
 #else
@@ -146,31 +145,32 @@ Yolov5PreProcess::OutTy Yolov5PreProcess::Process(Yolov5PreProcess::InTy bufferx
     return ProcessWithNeon(bufferx2);
   }
   return ProcessWithoutNeon(bufferx2);
-  
 }
 
-Yolov5PreProcess::OutTy Yolov5PreProcess::ProcessWithNeon(Yolov5PreProcess::InTy bufferx2) {
+Yolov5PreProcess::OutTy
+Yolov5PreProcess::ProcessWithNeon(Yolov5PreProcess::InTy bufferx2) {
   APP_PROFILE(Yolov5PreProcessWithNeon);
-  uint8_t* host_buffer = (uint8_t*)std::get<1>(bufferx2)->GetHostPtr();
+  uint8_t *host_buffer = (uint8_t *)std::get<1>(bufferx2)->GetHostPtr();
 
   int input_size = height * width * 3 * sizeof(float);
 
   void *buf = DevMemPool::AllocDevMem(input_size);
 
   auto dev_buffer_ptr = std::make_shared<DeviceBuffer>(
-        buf, input_size, DeviceBuffer::DevMemDeleter());
-  
-  CvtFocusNEONFuse(height, width, (float*)dev_buffer_ptr->GetHostPtr(), (uint8_t*)host_buffer);
+      buf, input_size, DeviceBuffer::DevMemDeleter());
 
+  CvtFocusNEONFuse(height, width, (float *)dev_buffer_ptr->GetHostPtr(),
+                   (uint8_t *)host_buffer);
 
   dev_buffer_ptr->CopyToDevice();
 
   return {std::get<0>(bufferx2), dev_buffer_ptr};
 }
 
-Yolov5PreProcess::OutTy Yolov5PreProcess::ProcessWithoutNeon(Yolov5PreProcess::InTy bufferx2) {
+Yolov5PreProcess::OutTy
+Yolov5PreProcess::ProcessWithoutNeon(Yolov5PreProcess::InTy bufferx2) {
   APP_PROFILE(Yolov5PreProcessWithoutNeon);
-  uint8_t* host_buffer = (uint8_t*)std::get<1>(bufferx2)->GetHostPtr();
+  uint8_t *host_buffer = (uint8_t *)std::get<1>(bufferx2)->GetHostPtr();
   cv::Mat input_img(height * 3 / 2, width, CV_8UC1, host_buffer);
   cv::Mat output_img(height, width, CV_8UC3);
   {
@@ -178,20 +178,22 @@ Yolov5PreProcess::OutTy Yolov5PreProcess::ProcessWithoutNeon(Yolov5PreProcess::I
     cv::cvtColor(input_img, output_img, cv::COLOR_YUV2RGB_NV12);
   }
 
-  //YUV420SP2RGBNEON(height, width, output_img.data, input_img.data);
-  //cv::imwrite("rgb.jpg", output_img);
+  // YUV420SP2RGBNEON(height, width, output_img.data, input_img.data);
+  // cv::imwrite("rgb.jpg", output_img);
 
   cv::Mat focus_format_img(height, width, CV_8UC3);
 
-  FocusTransform<uint8_t>(height, width, (uint8_t*)focus_format_img.data, (uint8_t*)output_img.data);
-  //FocusTransformNEON(height, width, (uint8_t*)focus_format_img.data, (uint8_t*)output_img.data);
+  FocusTransform<uint8_t>(height, width, (uint8_t *)focus_format_img.data,
+                          (uint8_t *)output_img.data);
+  // FocusTransformNEON(height, width, (uint8_t*)focus_format_img.data,
+  // (uint8_t*)output_img.data);
 
   int input_size = height * width * 3 * sizeof(float);
 
   void *buf = DevMemPool::AllocDevMem(input_size);
 
   auto dev_buffer_ptr = std::make_shared<DeviceBuffer>(
-        buf, input_size, DeviceBuffer::DevMemDeleter());
+      buf, input_size, DeviceBuffer::DevMemDeleter());
 
   cv::Mat output_float(height, width, CV_32FC3, dev_buffer_ptr->GetHostPtr());
   {
@@ -202,8 +204,9 @@ Yolov5PreProcess::OutTy Yolov5PreProcess::ProcessWithoutNeon(Yolov5PreProcess::I
     APP_PROFILE(IMG_DIV_255);
     output_float *= 0.00392156862745098;
   }
-  
-  //FocusTransform<float>(height, width, (float*)dev_buffer_ptr->GetHostPtr(), (float*)output_float.data);
+
+  // FocusTransform<float>(height, width, (float*)dev_buffer_ptr->GetHostPtr(),
+  // (float*)output_float.data);
 
   dev_buffer_ptr->CopyToDevice();
 
@@ -215,35 +218,35 @@ Yolov5PreProcess::OutTy Yolov5PreProcess::ProcessWithoutNeon(Yolov5PreProcess::I
 #include <arm_neon.h>
 
 // https://en.wikipedia.org/wiki/YUV#Y%E2%80%B2UV420sp_(NV21)_to_RGB_conversion_(Android)
-void YUV420SP2RGBNEON(int height, int width, uint8_t* dst, uint8_t* src) {
+void YUV420SP2RGBNEON(int height, int width, uint8_t *dst, uint8_t *src) {
   APP_PROFILE(YUV420SP2RGBNEON);
-  uint8_t* Y_even_row_start = src;
-  uint8_t* Y_odd_row_start = src + width;
-  uint8_t* UV_row_start = src + height * width;
-  uint8_t* dst_even_row_start = dst;
-  uint8_t* dst_odd_row_start = dst + width * 3;
+  uint8_t *Y_even_row_start = src;
+  uint8_t *Y_odd_row_start = src + width;
+  uint8_t *UV_row_start = src + height * width;
+  uint8_t *dst_even_row_start = dst;
+  uint8_t *dst_odd_row_start = dst + width * 3;
 
   const int VL = 16;
   const int half_VL = VL / 2;
   int row_iter = height / 2; // process 2 row in a time
   int col_iter = width / VL; // process 16 pixel in a time
 
-	int16x8_t minus128 = vdupq_n_s16(128);
+  int16x8_t minus128 = vdupq_n_s16(128);
   int16x4_t coeff351_s16 = vdup_n_s16(351);
   int16x4_t coeff179_s16 = vdup_n_s16(179);
   int16x4_t coeff86_s16 = vdup_n_s16(86);
   int16x4_t coeff443_s16 = vdup_n_s16(443);
 
-  for (int i = 0;i < row_iter; ++i) {
-    uint8_t* Y_even = Y_even_row_start;
-    uint8_t* Y_odd = Y_odd_row_start;
-    uint8_t* UV = UV_row_start;
-    uint8_t* dst_even_ptr = dst_even_row_start;
-    uint8_t* dst_odd_ptr = dst_odd_row_start;
-    for (int j = 0;j < col_iter; ++j) {
-      uint8x8x2_t y_even_pixels =	vld2_u8(Y_even);
+  for (int i = 0; i < row_iter; ++i) {
+    uint8_t *Y_even = Y_even_row_start;
+    uint8_t *Y_odd = Y_odd_row_start;
+    uint8_t *UV = UV_row_start;
+    uint8_t *dst_even_ptr = dst_even_row_start;
+    uint8_t *dst_odd_ptr = dst_odd_row_start;
+    for (int j = 0; j < col_iter; ++j) {
+      uint8x8x2_t y_even_pixels = vld2_u8(Y_even);
       Y_even += VL;
-      uint8x8x2_t y_odd_pixels =	vld2_u8(Y_odd);
+      uint8x8x2_t y_odd_pixels = vld2_u8(Y_odd);
       Y_odd += VL;
 
       uint8x8x2_t uv_pixels = vld2_u8(UV);
@@ -256,14 +259,14 @@ void YUV420SP2RGBNEON(int height, int width, uint8_t* dst, uint8_t* src) {
       uint16x8_t u_pixels_u16 = vmovl_u8(u_pixels);
       uint16x8_t v_pixels_u16 = vmovl_u8(v_pixels);
 
-      int16x8_t u_pixels_s16 = vcombine_s16(
-        vreinterpret_s16_u16(vget_low_u16(u_pixels_u16)), 
-        vreinterpret_s16_u16(vget_high_u16(u_pixels_u16)));
-      
-      int16x8_t v_pixels_s16 = vcombine_s16(
-        vreinterpret_s16_u16(vget_low_u16(v_pixels_u16)), 
-        vreinterpret_s16_u16(vget_high_u16(v_pixels_u16)));
-      
+      int16x8_t u_pixels_s16 =
+          vcombine_s16(vreinterpret_s16_u16(vget_low_u16(u_pixels_u16)),
+                       vreinterpret_s16_u16(vget_high_u16(u_pixels_u16)));
+
+      int16x8_t v_pixels_s16 =
+          vcombine_s16(vreinterpret_s16_u16(vget_low_u16(v_pixels_u16)),
+                       vreinterpret_s16_u16(vget_high_u16(v_pixels_u16)));
+
       int16x8_t u_pixels_m128_s16 = vsubq_s16(u_pixels_s16, minus128);
       int16x8_t v_pixels_m128_s16 = vsubq_s16(v_pixels_s16, minus128);
 
@@ -271,23 +274,29 @@ void YUV420SP2RGBNEON(int height, int width, uint8_t* dst, uint8_t* src) {
       // max value: (351*(255-128)) >> 8  --> 174
       // min value: (351*(0-128)) >> 8  --> -176
       // value will not overflow
-      int16x4_t rTmp_s16_low = vmovn_s32(vshrq_n_s32(vmull_s16(coeff351_s16, vget_low_s16(v_pixels_m128_s16)), 8));
-      int16x4_t rTmp_s16_high = vmovn_s32(vshrq_n_s32(vmull_s16(coeff351_s16, vget_high_s16(v_pixels_m128_s16)), 8));
+      int16x4_t rTmp_s16_low = vmovn_s32(vshrq_n_s32(
+          vmull_s16(coeff351_s16, vget_low_s16(v_pixels_m128_s16)), 8));
+      int16x4_t rTmp_s16_high = vmovn_s32(vshrq_n_s32(
+          vmull_s16(coeff351_s16, vget_high_s16(v_pixels_m128_s16)), 8));
       int16x8_t rTmp_s16 = vcombine_s16(rTmp_s16_low, rTmp_s16_high);
 
       // int16_t: (179*(vValue-128) + 86*(uValue-128))>>8
-      int16x4_t gTmp_s16_low = vmovn_s32(vshrq_n_s32(vaddq_s32(
-        vmull_s16(coeff179_s16, vget_low_s16(v_pixels_m128_s16)),
-        vmull_s16(coeff86_s16, vget_low_s16(u_pixels_m128_s16))), 8));
-      
-      int16x4_t gTmp_s16_high = vmovn_s32(vshrq_n_s32(vaddq_s32(
-        vmull_s16(coeff179_s16, vget_high_s16(v_pixels_m128_s16)),
-        vmull_s16(coeff86_s16, vget_high_s16(u_pixels_m128_s16))), 8));
+      int16x4_t gTmp_s16_low = vmovn_s32(vshrq_n_s32(
+          vaddq_s32(vmull_s16(coeff179_s16, vget_low_s16(v_pixels_m128_s16)),
+                    vmull_s16(coeff86_s16, vget_low_s16(u_pixels_m128_s16))),
+          8));
+
+      int16x4_t gTmp_s16_high = vmovn_s32(vshrq_n_s32(
+          vaddq_s32(vmull_s16(coeff179_s16, vget_high_s16(v_pixels_m128_s16)),
+                    vmull_s16(coeff86_s16, vget_high_s16(u_pixels_m128_s16))),
+          8));
       int16x8_t gTmp_s16 = vcombine_s16(gTmp_s16_low, gTmp_s16_high);
 
       // int16_t: (443*(uValue-128))>>8
-      int16x4_t bTmp_s16_low = vmovn_s32(vshrq_n_s32(vmull_s16(coeff443_s16, vget_low_s16(u_pixels_m128_s16)), 8));
-      int16x4_t bTmp_s16_high = vmovn_s32(vshrq_n_s32(vmull_s16(coeff443_s16, vget_high_s16(u_pixels_m128_s16)), 8));
+      int16x4_t bTmp_s16_low = vmovn_s32(vshrq_n_s32(
+          vmull_s16(coeff443_s16, vget_low_s16(u_pixels_m128_s16)), 8));
+      int16x4_t bTmp_s16_high = vmovn_s32(vshrq_n_s32(
+          vmull_s16(coeff443_s16, vget_high_s16(u_pixels_m128_s16)), 8));
       int16x8_t bTmp_s16 = vcombine_s16(bTmp_s16_low, bTmp_s16_high);
 
       uint8x8x3_t result_even[2];
@@ -305,53 +314,56 @@ void YUV420SP2RGBNEON(int height, int width, uint8_t* dst, uint8_t* src) {
         uint16x8_t y_odd_pixels_u16 = vmovl_u8(y_odd_pixels_u8);
 
         int16x8_t y_even_pixels_s16 = vcombine_s16(
-          vreinterpret_s16_u16(vget_low_u16(y_even_pixels_u16)), 
-          vreinterpret_s16_u16(vget_high_u16(y_even_pixels_u16)));
-      
-        int16x8_t y_odd_pixels_s16 = vcombine_s16(
-          vreinterpret_s16_u16(vget_low_u16(y_odd_pixels_u16)), 
-          vreinterpret_s16_u16(vget_high_u16(y_odd_pixels_u16)));
-        
+            vreinterpret_s16_u16(vget_low_u16(y_even_pixels_u16)),
+            vreinterpret_s16_u16(vget_high_u16(y_even_pixels_u16)));
+
+        int16x8_t y_odd_pixels_s16 =
+            vcombine_s16(vreinterpret_s16_u16(vget_low_u16(y_odd_pixels_u16)),
+                         vreinterpret_s16_u16(vget_high_u16(y_odd_pixels_u16)));
+
         // rTmp = yValue + (351*(vValue-128))>>8;
         int16x8_t rTmp_even = vaddq_s16(y_even_pixels_s16, rTmp_s16);
-        result_even[k].val[0] = vmovn_u16(vcombine_u16(
-          vreinterpret_u16_s16(vget_low_s16(rTmp_even)),
-          vreinterpret_u16_s16(vget_high_s16(rTmp_even))));
+        result_even[k].val[0] = vmovn_u16(
+            vcombine_u16(vreinterpret_u16_s16(vget_low_s16(rTmp_even)),
+                         vreinterpret_u16_s16(vget_high_s16(rTmp_even))));
 
         int16x8_t rTmp_odd = vaddq_s16(y_odd_pixels_s16, rTmp_s16);
-        result_odd[k].val[0] = vmovn_u16(vcombine_u16(
-          vreinterpret_u16_s16(vget_low_s16(rTmp_odd)),
-          vreinterpret_u16_s16(vget_high_s16(rTmp_odd))));
-        
+        result_odd[k].val[0] = vmovn_u16(
+            vcombine_u16(vreinterpret_u16_s16(vget_low_s16(rTmp_odd)),
+                         vreinterpret_u16_s16(vget_high_s16(rTmp_odd))));
+
         int16x8_t gTmp_even = vsubq_s16(y_even_pixels_s16, gTmp_s16);
-        result_even[k].val[1] = vmovn_u16(vcombine_u16(
-          vreinterpret_u16_s16(vget_low_s16(gTmp_even)),
-          vreinterpret_u16_s16(vget_high_s16(gTmp_even))));
-        
+        result_even[k].val[1] = vmovn_u16(
+            vcombine_u16(vreinterpret_u16_s16(vget_low_s16(gTmp_even)),
+                         vreinterpret_u16_s16(vget_high_s16(gTmp_even))));
+
         int16x8_t gTmp_odd = vsubq_s16(y_odd_pixels_s16, gTmp_s16);
-        result_odd[k].val[1] =  vmovn_u16(vcombine_u16(
-          vreinterpret_u16_s16(vget_low_s16(gTmp_odd)),
-          vreinterpret_u16_s16(vget_high_s16(gTmp_odd))));
-        
+        result_odd[k].val[1] = vmovn_u16(
+            vcombine_u16(vreinterpret_u16_s16(vget_low_s16(gTmp_odd)),
+                         vreinterpret_u16_s16(vget_high_s16(gTmp_odd))));
+
         int16x8_t bTmp_even = vaddq_s16(y_even_pixels_s16, bTmp_s16);
-        result_even[k].val[2] = vmovn_u16(vcombine_u16(
-          vreinterpret_u16_s16(vget_low_s16(bTmp_even)),
-          vreinterpret_u16_s16(vget_high_s16(bTmp_even))));
+        result_even[k].val[2] = vmovn_u16(
+            vcombine_u16(vreinterpret_u16_s16(vget_low_s16(bTmp_even)),
+                         vreinterpret_u16_s16(vget_high_s16(bTmp_even))));
 
         int16x8_t bTmp_odd = vaddq_s16(y_odd_pixels_s16, bTmp_s16);
-        result_odd[k].val[2] = vmovn_u16(vcombine_u16(
-          vreinterpret_u16_s16(vget_low_s16(bTmp_odd)),
-          vreinterpret_u16_s16(vget_high_s16(bTmp_odd))));
+        result_odd[k].val[2] = vmovn_u16(
+            vcombine_u16(vreinterpret_u16_s16(vget_low_s16(bTmp_odd)),
+                         vreinterpret_u16_s16(vget_high_s16(bTmp_odd))));
       }
 
       for (int c = 0; c < 3; ++c) {
-        result_even_zip[0].val[c] = vzip1_u8(result_even[0].val[c], result_even[1].val[c]);
-        result_even_zip[1].val[c] = vzip2_u8(result_even[0].val[c], result_even[1].val[c]);
+        result_even_zip[0].val[c] =
+            vzip1_u8(result_even[0].val[c], result_even[1].val[c]);
+        result_even_zip[1].val[c] =
+            vzip2_u8(result_even[0].val[c], result_even[1].val[c]);
 
-        result_odd_zip[0].val[c] = vzip1_u8(result_odd[0].val[c], result_odd[1].val[c]);
-        result_odd_zip[1].val[c] = vzip2_u8(result_odd[0].val[c], result_odd[1].val[c]);
+        result_odd_zip[0].val[c] =
+            vzip1_u8(result_odd[0].val[c], result_odd[1].val[c]);
+        result_odd_zip[1].val[c] =
+            vzip2_u8(result_odd[0].val[c], result_odd[1].val[c]);
       }
-
 
       vst3_u8(dst_even_ptr, result_even_zip[0]);
       dst_even_ptr += half_VL * 3;
@@ -372,7 +384,7 @@ void YUV420SP2RGBNEON(int height, int width, uint8_t* dst, uint8_t* src) {
   }
 }
 
-void FocusTransformNEON(int height, int width, uint8_t* dst, uint8_t* src) {
+void FocusTransformNEON(int height, int width, uint8_t *dst, uint8_t *src) {
   APP_PROFILE(FocusTransformNEON);
   // (h, w, 3) to (3*4, h/2, w/2)
   int dst_plane_size = height * width / 4;
@@ -380,13 +392,14 @@ void FocusTransformNEON(int height, int width, uint8_t* dst, uint8_t* src) {
   int dst_row_size = width / 2;
   int half_row = width / 2;
   int half_height = height / 2;
-  for (int i = 0;i < height; ++i) {
+  for (int i = 0; i < height; ++i) {
     int row_off = i % 2;
     int dst_even_offset = row_off * 3 * dst_plane_size + dst_row_size * (i / 2);
-    uint8_t* dst_even = dst + dst_even_offset;
-    int dst_odd_offset = (row_off + 2) * 3 * dst_plane_size + dst_row_size * (i / 2);
-    uint8_t* dst_odd = dst + dst_odd_offset;
-    uint8_t* src_row = src + i * src_row_size;
+    uint8_t *dst_even = dst + dst_even_offset;
+    int dst_odd_offset =
+        (row_off + 2) * 3 * dst_plane_size + dst_row_size * (i / 2);
+    uint8_t *dst_odd = dst + dst_odd_offset;
+    uint8_t *src_row = src + i * src_row_size;
     const int row_repeat = half_row / 16;
     const int load_size = 16 * 3;
     for (int j = 0; j < row_repeat; ++j) {
@@ -396,11 +409,12 @@ void FocusTransformNEON(int height, int width, uint8_t* dst, uint8_t* src) {
       uint8x16x3_t vec_dst_high = vld3q_u8(src_row);
       src_row += load_size;
 
-      uint8_t* curr_even = dst_even + j * 16;
-      uint8_t* curr_odd = dst_odd + j * 16;
+      uint8_t *curr_even = dst_even + j * 16;
+      uint8_t *curr_odd = dst_odd + j * 16;
 
-      for (int c = 0;c < 3; ++c) {
-        uint8x16_t vec_even = vuzp1q_u8(vec_dst_low.val[c], vec_dst_high.val[c]);
+      for (int c = 0; c < 3; ++c) {
+        uint8x16_t vec_even =
+            vuzp1q_u8(vec_dst_low.val[c], vec_dst_high.val[c]);
         uint8x16_t vec_odd = vuzp2q_u8(vec_dst_low.val[c], vec_dst_high.val[c]);
         vst1q_u8(curr_even, vec_even);
         curr_even += dst_plane_size;
@@ -410,11 +424,11 @@ void FocusTransformNEON(int height, int width, uint8_t* dst, uint8_t* src) {
     }
   }
 
-  //std::ofstream ofs("focus_neon.bin", std::ios::binary | std::ios::out);
-  //ofs.write((const char*)dst, height * width * 3 * sizeof(float));
+  // std::ofstream ofs("focus_neon.bin", std::ios::binary | std::ios::out);
+  // ofs.write((const char*)dst, height * width * 3 * sizeof(float));
 }
 
-void FocusTransformNEONFuse(int height, int width, float* dst, uint8_t* src) {
+void FocusTransformNEONFuse(int height, int width, float *dst, uint8_t *src) {
   APP_PROFILE(FocusTransformNEONFuse);
   // (h, w, 3) to (3*4, h/2, w/2)
   int dst_plane_size = height * width / 4;
@@ -422,42 +436,47 @@ void FocusTransformNEONFuse(int height, int width, float* dst, uint8_t* src) {
   int dst_row_size = width / 2;
   int half_row = width / 2;
   int half_height = height / 2;
-  
+
   float32x4_t coeff = vdupq_n_f32(0.00392156862745098);
 
-  for (int i = 0;i < height; ++i) {
+  for (int i = 0; i < height; ++i) {
     int row_off = i % 2;
     int dst_even_offset = row_off * 3 * dst_plane_size + dst_row_size * (i / 2);
-    float* dst_even = dst + dst_even_offset;
-    int dst_odd_offset = (row_off + 2) * 3 * dst_plane_size + dst_row_size * (i / 2);
-    float* dst_odd = dst + dst_odd_offset;
-    uint8_t* src_row = src + i * src_row_size;
+    float *dst_even = dst + dst_even_offset;
+    int dst_odd_offset =
+        (row_off + 2) * 3 * dst_plane_size + dst_row_size * (i / 2);
+    float *dst_odd = dst + dst_odd_offset;
+    uint8_t *src_row = src + i * src_row_size;
     const int row_repeat = half_row / 16;
     const int load_size = 16 * 3;
     for (int j = 0; j < row_repeat; ++j) {
       uint8x16x3_t vec_dst_low = vld3q_u8(src_row);
       src_row += load_size;
 
-      float* curr_even = dst_even + j * 16;
+      float *curr_even = dst_even + j * 16;
       uint8x16x3_t vec_dst_high = vld3q_u8(src_row);
       src_row += load_size;
 
-      float* curr_odd = dst_odd + j * 16;
+      float *curr_odd = dst_odd + j * 16;
 
       for (int c = 0; c < 3; ++c) {
-        uint8x16_t vec_even = vuzp1q_u8(vec_dst_low.val[c], vec_dst_high.val[c]);
+        uint8x16_t vec_even =
+            vuzp1q_u8(vec_dst_low.val[c], vec_dst_high.val[c]);
         uint8x16_t vec_odd = vuzp2q_u8(vec_dst_low.val[c], vec_dst_high.val[c]);
 
         uint16x8_t vec_even_low_u16 = vmovl_u8(vget_low_u8(vec_even));
         uint16x8_t vec_even_high_u16 = vmovl_u8(vget_high_u8(vec_even));
-        
 
         float32x4x4_t vec_even_q_f32;
 
-        vec_even_q_f32.val[0] = vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_low_u16(vec_even_low_u16))), coeff);
-        vec_even_q_f32.val[1] = vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_high_u16(vec_even_low_u16))), coeff);
-        vec_even_q_f32.val[2] = vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_low_u16(vec_even_high_u16))), coeff);
-        vec_even_q_f32.val[3] = vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_high_u16(vec_even_high_u16))), coeff);
+        vec_even_q_f32.val[0] = vmulq_f32(
+            vcvtq_f32_u32(vmovl_u16(vget_low_u16(vec_even_low_u16))), coeff);
+        vec_even_q_f32.val[1] = vmulq_f32(
+            vcvtq_f32_u32(vmovl_u16(vget_high_u16(vec_even_low_u16))), coeff);
+        vec_even_q_f32.val[2] = vmulq_f32(
+            vcvtq_f32_u32(vmovl_u16(vget_low_u16(vec_even_high_u16))), coeff);
+        vec_even_q_f32.val[3] = vmulq_f32(
+            vcvtq_f32_u32(vmovl_u16(vget_high_u16(vec_even_high_u16))), coeff);
 
         for (int q = 0; q < 4; ++q) {
           vst1q_f32(curr_even + q * 4, vec_even_q_f32.val[q]);
@@ -469,10 +488,14 @@ void FocusTransformNEONFuse(int height, int width, float* dst, uint8_t* src) {
 
         float32x4x4_t vec_odd_q_f32;
 
-        vec_odd_q_f32.val[0] = vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_low_u16(vec_odd_low_u16))), coeff);
-        vec_odd_q_f32.val[1] = vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_high_u16(vec_odd_low_u16))), coeff);
-        vec_odd_q_f32.val[2] = vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_low_u16(vec_odd_high_u16))), coeff);
-        vec_odd_q_f32.val[3] = vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_high_u16(vec_odd_high_u16))), coeff);
+        vec_odd_q_f32.val[0] = vmulq_f32(
+            vcvtq_f32_u32(vmovl_u16(vget_low_u16(vec_odd_low_u16))), coeff);
+        vec_odd_q_f32.val[1] = vmulq_f32(
+            vcvtq_f32_u32(vmovl_u16(vget_high_u16(vec_odd_low_u16))), coeff);
+        vec_odd_q_f32.val[2] = vmulq_f32(
+            vcvtq_f32_u32(vmovl_u16(vget_low_u16(vec_odd_high_u16))), coeff);
+        vec_odd_q_f32.val[3] = vmulq_f32(
+            vcvtq_f32_u32(vmovl_u16(vget_high_u16(vec_odd_high_u16))), coeff);
 
         for (int q = 0; q < 4; ++q) {
           vst1q_f32(curr_odd + q * 4, vec_odd_q_f32.val[q]);
@@ -482,22 +505,22 @@ void FocusTransformNEONFuse(int height, int width, float* dst, uint8_t* src) {
     }
   }
 
-  //std::ofstream ofs("focus.bin", std::ios::binary | std::ios::out);
-  //ofs.write((const char*)dst, height * width * 3 * sizeof(float));
+  // std::ofstream ofs("focus.bin", std::ios::binary | std::ios::out);
+  // ofs.write((const char*)dst, height * width * 3 * sizeof(float));
 }
 
-void CvtFocusNEONFuse(int height, int width, float* dst, uint8_t* src) {
+void CvtFocusNEONFuse(int height, int width, float *dst, uint8_t *src) {
   APP_PROFILE(CvtFocusNEONFuse);
-  uint8_t* Y_even_row_start = src;
-  uint8_t* Y_odd_row_start = src + width;
-  uint8_t* UV_row_start = src + height * width;
+  uint8_t *Y_even_row_start = src;
+  uint8_t *Y_odd_row_start = src + width;
+  uint8_t *UV_row_start = src + height * width;
 
   const int VL = 16;
   const int half_VL = VL / 2;
   int row_iter = height / 2; // process 2 row in a time
   int col_iter = width / VL; // process 16 pixel in a time
 
-	int16x8_t minus128 = vdupq_n_s16(128);
+  int16x8_t minus128 = vdupq_n_s16(128);
   int16x4_t coeff351_s16 = vdup_n_s16(351);
   int16x4_t coeff179_s16 = vdup_n_s16(179);
   int16x4_t coeff86_s16 = vdup_n_s16(86);
@@ -509,10 +532,10 @@ void CvtFocusNEONFuse(int height, int width, float* dst, uint8_t* src) {
 
   float32x4_t scale_coeff = vdupq_n_f32(0.00392156862745098);
 
-  for (int i = 0;i < row_iter; ++i) {
-    uint8_t* Y_even = Y_even_row_start;
-    uint8_t* Y_odd = Y_odd_row_start;
-    uint8_t* UV = UV_row_start;
+  for (int i = 0; i < row_iter; ++i) {
+    uint8_t *Y_even = Y_even_row_start;
+    uint8_t *Y_odd = Y_odd_row_start;
+    uint8_t *UV = UV_row_start;
 
     int dst_even_row_even_col_offset = dst_row_size * i;
     int dst_even_row_odd_col_offset = 2 * 3 * dst_plane_size + dst_row_size * i;
@@ -520,19 +543,18 @@ void CvtFocusNEONFuse(int height, int width, float* dst, uint8_t* src) {
     int dst_odd_row_even_col_offset = 3 * dst_plane_size + dst_row_size * i;
     int dst_odd_row_odd_col_offset = 3 * 3 * dst_plane_size + dst_row_size * i;
 
-    float* dst_even_row[2];
-    float* dst_odd_row[2];
+    float *dst_even_row[2];
+    float *dst_odd_row[2];
 
     dst_even_row[0] = dst + dst_even_row_even_col_offset;
     dst_even_row[1] = dst + dst_even_row_odd_col_offset;
     dst_odd_row[0] = dst + dst_odd_row_even_col_offset;
     dst_odd_row[1] = dst + dst_odd_row_odd_col_offset;
-    
 
-    for (int j = 0;j < col_iter; ++j) {
-      uint8x8x2_t y_even_pixels =	vld2_u8(Y_even);
+    for (int j = 0; j < col_iter; ++j) {
+      uint8x8x2_t y_even_pixels = vld2_u8(Y_even);
       Y_even += VL;
-      uint8x8x2_t y_odd_pixels =	vld2_u8(Y_odd);
+      uint8x8x2_t y_odd_pixels = vld2_u8(Y_odd);
       Y_odd += VL;
 
       uint8x8x2_t uv_pixels = vld2_u8(UV);
@@ -545,14 +567,14 @@ void CvtFocusNEONFuse(int height, int width, float* dst, uint8_t* src) {
       uint16x8_t u_pixels_u16 = vmovl_u8(u_pixels);
       uint16x8_t v_pixels_u16 = vmovl_u8(v_pixels);
 
-      int16x8_t u_pixels_s16 = vcombine_s16(
-        vreinterpret_s16_u16(vget_low_u16(u_pixels_u16)), 
-        vreinterpret_s16_u16(vget_high_u16(u_pixels_u16)));
-      
-      int16x8_t v_pixels_s16 = vcombine_s16(
-        vreinterpret_s16_u16(vget_low_u16(v_pixels_u16)), 
-        vreinterpret_s16_u16(vget_high_u16(v_pixels_u16)));
-      
+      int16x8_t u_pixels_s16 =
+          vcombine_s16(vreinterpret_s16_u16(vget_low_u16(u_pixels_u16)),
+                       vreinterpret_s16_u16(vget_high_u16(u_pixels_u16)));
+
+      int16x8_t v_pixels_s16 =
+          vcombine_s16(vreinterpret_s16_u16(vget_low_u16(v_pixels_u16)),
+                       vreinterpret_s16_u16(vget_high_u16(v_pixels_u16)));
+
       int16x8_t u_pixels_m128_s16 = vsubq_s16(u_pixels_s16, minus128);
       int16x8_t v_pixels_m128_s16 = vsubq_s16(v_pixels_s16, minus128);
 
@@ -560,23 +582,29 @@ void CvtFocusNEONFuse(int height, int width, float* dst, uint8_t* src) {
       // max value: (351*(255-128)) >> 8  --> 174
       // min value: (351*(0-128)) >> 8  --> -176
       // value will not overflow
-      int16x4_t rTmp_s16_low = vmovn_s32(vshrq_n_s32(vmull_s16(coeff351_s16, vget_low_s16(v_pixels_m128_s16)), 8));
-      int16x4_t rTmp_s16_high = vmovn_s32(vshrq_n_s32(vmull_s16(coeff351_s16, vget_high_s16(v_pixels_m128_s16)), 8));
+      int16x4_t rTmp_s16_low = vmovn_s32(vshrq_n_s32(
+          vmull_s16(coeff351_s16, vget_low_s16(v_pixels_m128_s16)), 8));
+      int16x4_t rTmp_s16_high = vmovn_s32(vshrq_n_s32(
+          vmull_s16(coeff351_s16, vget_high_s16(v_pixels_m128_s16)), 8));
       int16x8_t rTmp_s16 = vcombine_s16(rTmp_s16_low, rTmp_s16_high);
 
       // int16_t: (179*(vValue-128) + 86*(uValue-128))>>8
-      int16x4_t gTmp_s16_low = vmovn_s32(vshrq_n_s32(vaddq_s32(
-        vmull_s16(coeff179_s16, vget_low_s16(v_pixels_m128_s16)),
-        vmull_s16(coeff86_s16, vget_low_s16(u_pixels_m128_s16))), 8));
-      
-      int16x4_t gTmp_s16_high = vmovn_s32(vshrq_n_s32(vaddq_s32(
-        vmull_s16(coeff179_s16, vget_high_s16(v_pixels_m128_s16)),
-        vmull_s16(coeff86_s16, vget_high_s16(u_pixels_m128_s16))), 8));
+      int16x4_t gTmp_s16_low = vmovn_s32(vshrq_n_s32(
+          vaddq_s32(vmull_s16(coeff179_s16, vget_low_s16(v_pixels_m128_s16)),
+                    vmull_s16(coeff86_s16, vget_low_s16(u_pixels_m128_s16))),
+          8));
+
+      int16x4_t gTmp_s16_high = vmovn_s32(vshrq_n_s32(
+          vaddq_s32(vmull_s16(coeff179_s16, vget_high_s16(v_pixels_m128_s16)),
+                    vmull_s16(coeff86_s16, vget_high_s16(u_pixels_m128_s16))),
+          8));
       int16x8_t gTmp_s16 = vcombine_s16(gTmp_s16_low, gTmp_s16_high);
 
       // int16_t: (443*(uValue-128))>>8
-      int16x4_t bTmp_s16_low = vmovn_s32(vshrq_n_s32(vmull_s16(coeff443_s16, vget_low_s16(u_pixels_m128_s16)), 8));
-      int16x4_t bTmp_s16_high = vmovn_s32(vshrq_n_s32(vmull_s16(coeff443_s16, vget_high_s16(u_pixels_m128_s16)), 8));
+      int16x4_t bTmp_s16_low = vmovn_s32(vshrq_n_s32(
+          vmull_s16(coeff443_s16, vget_low_s16(u_pixels_m128_s16)), 8));
+      int16x4_t bTmp_s16_high = vmovn_s32(vshrq_n_s32(
+          vmull_s16(coeff443_s16, vget_high_s16(u_pixels_m128_s16)), 8));
       int16x8_t bTmp_s16 = vcombine_s16(bTmp_s16_low, bTmp_s16_high);
 
       uint8x8x3_t result_even[2];
@@ -586,9 +614,9 @@ void CvtFocusNEONFuse(int height, int width, float* dst, uint8_t* src) {
       uint8x8x3_t result_odd_zip[2];
 
       for (int k = 0; k < 2; ++k) {
-        float* dst_even_base = dst_even_row[k];
+        float *dst_even_base = dst_even_row[k];
         dst_even_row[k] += 8;
-        float* dst_odd_base = dst_odd_row[k];
+        float *dst_odd_base = dst_odd_row[k];
         dst_odd_row[k] += 8;
 
         // convert y to int16
@@ -599,52 +627,64 @@ void CvtFocusNEONFuse(int height, int width, float* dst, uint8_t* src) {
         uint16x8_t y_odd_pixels_u16 = vmovl_u8(y_odd_pixels_u8);
 
         int16x8_t y_even_pixels_s16 = vcombine_s16(
-          vreinterpret_s16_u16(vget_low_u16(y_even_pixels_u16)), 
-          vreinterpret_s16_u16(vget_high_u16(y_even_pixels_u16)));
-      
-        int16x8_t y_odd_pixels_s16 = vcombine_s16(
-          vreinterpret_s16_u16(vget_low_u16(y_odd_pixels_u16)), 
-          vreinterpret_s16_u16(vget_high_u16(y_odd_pixels_u16)));
-        
+            vreinterpret_s16_u16(vget_low_u16(y_even_pixels_u16)),
+            vreinterpret_s16_u16(vget_high_u16(y_even_pixels_u16)));
+
+        int16x8_t y_odd_pixels_s16 =
+            vcombine_s16(vreinterpret_s16_u16(vget_low_u16(y_odd_pixels_u16)),
+                         vreinterpret_s16_u16(vget_high_u16(y_odd_pixels_u16)));
+
         // rTmp = yValue + (351*(vValue-128))>>8;
         int16x8_t rTmp_even = vaddq_s16(y_even_pixels_s16, rTmp_s16);
-        float32x4_t rTmp_even_f32_qlow =  vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_low_s16(rTmp_even))), scale_coeff);
-        float32x4_t rTmp_even_f32_qhigh = vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_high_s16(rTmp_even))), scale_coeff);
+        float32x4_t rTmp_even_f32_qlow = vmulq_f32(
+            vcvtq_f32_s32(vmovl_s16(vget_low_s16(rTmp_even))), scale_coeff);
+        float32x4_t rTmp_even_f32_qhigh = vmulq_f32(
+            vcvtq_f32_s32(vmovl_s16(vget_high_s16(rTmp_even))), scale_coeff);
         vst1q_f32(dst_even_base, rTmp_even_f32_qlow);
         vst1q_f32(dst_even_base + 4, rTmp_even_f32_qhigh);
         dst_even_base += dst_plane_size;
 
         int16x8_t rTmp_odd = vaddq_s16(y_odd_pixels_s16, rTmp_s16);
-        float32x4_t rTmp_odd_f32_qlow =  vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_low_s16(rTmp_odd))), scale_coeff);
-        float32x4_t rTmp_odd_f32_qhigh = vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_high_s16(rTmp_odd))), scale_coeff);
+        float32x4_t rTmp_odd_f32_qlow = vmulq_f32(
+            vcvtq_f32_s32(vmovl_s16(vget_low_s16(rTmp_odd))), scale_coeff);
+        float32x4_t rTmp_odd_f32_qhigh = vmulq_f32(
+            vcvtq_f32_s32(vmovl_s16(vget_high_s16(rTmp_odd))), scale_coeff);
         vst1q_f32(dst_odd_base, rTmp_odd_f32_qlow);
         vst1q_f32(dst_odd_base + 4, rTmp_odd_f32_qhigh);
         dst_odd_base += dst_plane_size;
 
         int16x8_t gTmp_even = vsubq_s16(y_even_pixels_s16, gTmp_s16);
-        float32x4_t gTmp_even_f32_qlow =  vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_low_s16(gTmp_even))), scale_coeff);
-        float32x4_t gTmp_even_f32_qhigh = vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_high_s16(gTmp_even))), scale_coeff);
+        float32x4_t gTmp_even_f32_qlow = vmulq_f32(
+            vcvtq_f32_s32(vmovl_s16(vget_low_s16(gTmp_even))), scale_coeff);
+        float32x4_t gTmp_even_f32_qhigh = vmulq_f32(
+            vcvtq_f32_s32(vmovl_s16(vget_high_s16(gTmp_even))), scale_coeff);
         vst1q_f32(dst_even_base, gTmp_even_f32_qlow);
         vst1q_f32(dst_even_base + 4, gTmp_even_f32_qhigh);
         dst_even_base += dst_plane_size;
-        
+
         int16x8_t gTmp_odd = vsubq_s16(y_odd_pixels_s16, gTmp_s16);
-        float32x4_t gTmp_odd_f32_qlow =  vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_low_s16(gTmp_odd))), scale_coeff);
-        float32x4_t gTmp_odd_f32_qhigh = vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_high_s16(gTmp_odd))), scale_coeff);
+        float32x4_t gTmp_odd_f32_qlow = vmulq_f32(
+            vcvtq_f32_s32(vmovl_s16(vget_low_s16(gTmp_odd))), scale_coeff);
+        float32x4_t gTmp_odd_f32_qhigh = vmulq_f32(
+            vcvtq_f32_s32(vmovl_s16(vget_high_s16(gTmp_odd))), scale_coeff);
         vst1q_f32(dst_odd_base, gTmp_odd_f32_qlow);
         vst1q_f32(dst_odd_base + 4, gTmp_odd_f32_qhigh);
         dst_odd_base += dst_plane_size;
-        
+
         int16x8_t bTmp_even = vaddq_s16(y_even_pixels_s16, bTmp_s16);
-        float32x4_t bTmp_even_f32_qlow =  vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_low_s16(bTmp_even))), scale_coeff);
-        float32x4_t bTmp_even_f32_qhigh = vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_high_s16(bTmp_even))), scale_coeff);
+        float32x4_t bTmp_even_f32_qlow = vmulq_f32(
+            vcvtq_f32_s32(vmovl_s16(vget_low_s16(bTmp_even))), scale_coeff);
+        float32x4_t bTmp_even_f32_qhigh = vmulq_f32(
+            vcvtq_f32_s32(vmovl_s16(vget_high_s16(bTmp_even))), scale_coeff);
         vst1q_f32(dst_even_base, bTmp_even_f32_qlow);
         vst1q_f32(dst_even_base + 4, bTmp_even_f32_qhigh);
         dst_even_base += dst_plane_size;
 
         int16x8_t bTmp_odd = vaddq_s16(y_odd_pixels_s16, bTmp_s16);
-        float32x4_t bTmp_odd_f32_qlow =  vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_low_s16(bTmp_odd))), scale_coeff);
-        float32x4_t bTmp_odd_f32_qhigh = vmulq_f32(vcvtq_f32_s32(vmovl_s16(vget_high_s16(bTmp_odd))), scale_coeff);
+        float32x4_t bTmp_odd_f32_qlow = vmulq_f32(
+            vcvtq_f32_s32(vmovl_s16(vget_low_s16(bTmp_odd))), scale_coeff);
+        float32x4_t bTmp_odd_f32_qhigh = vmulq_f32(
+            vcvtq_f32_s32(vmovl_s16(vget_high_s16(bTmp_odd))), scale_coeff);
         vst1q_f32(dst_odd_base, bTmp_odd_f32_qlow);
         vst1q_f32(dst_odd_base + 4, bTmp_odd_f32_qhigh);
         dst_odd_base += dst_plane_size;
@@ -656,21 +696,20 @@ void CvtFocusNEONFuse(int height, int width, float* dst, uint8_t* src) {
     UV_row_start += width;
   }
 
-  //std::ofstream ofs("focus.bin", std::ios::binary | std::ios::out);
-  //ofs.write((const char*)dst, height * width * 3 * sizeof(float));
+  // std::ofstream ofs("focus.bin", std::ios::binary | std::ios::out);
+  // ofs.write((const char*)dst, height * width * 3 * sizeof(float));
 }
 #else
 
-void FocusTransformNEON(int height, int width, uint8_t* dst, uint8_t* src) {}
+void FocusTransformNEON(int height, int width, uint8_t *dst, uint8_t *src) {}
 
-void FocusTransformNEONFuse(int height, int width, float* dst, uint8_t* src) {}
+void FocusTransformNEONFuse(int height, int width, float *dst, uint8_t *src) {}
 
-void CvtFocusNEONFuse(int height, int width, float* dst, uint8_t* src) {}
+void CvtFocusNEONFuse(int height, int width, float *dst, uint8_t *src) {}
 
-void YUV420SP2RGBNEON(int height, int width, uint8_t* dst, uint8_t* src) {}
+void YUV420SP2RGBNEON(int height, int width, uint8_t *dst, uint8_t *src) {}
 
-#endif//__ARM_NEON
-
+#endif //__ARM_NEON
 
 Yolov5Model::Yolov5Model(const std::string &path, aclrtStream stream)
     : yolov5_model(stream), model_stream(stream) {
@@ -685,8 +724,8 @@ Yolov5Model::OutTy Yolov5Model::Process(Yolov5Model::InTy bufferx2) {
   return {output_buffers, std::get<0>(bufferx2)};
 }
 
-Yolov5PostProcess::Yolov5PostProcess(int width, int height,
-int model_width, int model_height)
+Yolov5PostProcess::Yolov5PostProcess(int width, int height, int model_width,
+                                     int model_height)
     : width(width), height(height) {
   h_ratio = height / (float)model_height;
   w_ratio = width / (float)model_width;
@@ -711,8 +750,7 @@ Yolov5PostProcess::OutTy Yolov5PostProcess::Process(InTy input) {
 
   PyObject *post_processing_fn = env.GetPostProcessFn();
 
-  PyObject *post_processing_arg =
-      Py_BuildValue("(O)", pred_arr);
+  PyObject *post_processing_arg = Py_BuildValue("(O)", pred_arr);
 
   Py_XDECREF(pred_arr);
 
@@ -735,7 +773,6 @@ Yolov5PostProcess::OutTy Yolov5PostProcess::Process(InTy input) {
 
   YUV420SPImage img((uint8_t *)image_buffer->GetHostPtr(), height, width);
   YUVColor box_color(0, 0, 0xff); // Red?
-
 
   Py_ssize_t bboxes_size = PyList_Size(bboxes);
   for (Py_ssize_t i = 0; i < bboxes_size; ++i) {
@@ -851,7 +888,8 @@ void Yolov5StreamThread(json config, int id) {
   Yolov5PreProcess yolov5_preprocess(model_width, model_height, enable_neon);
 
   TaskNode<Yolov5PreProcess, Yolov5PreProcess::InTy, Yolov5PreProcess::OutTy>
-      yolov5_preprocess_node(&yolov5_preprocess, "Yolov5PreProcess", stream_name);
+      yolov5_preprocess_node(&yolov5_preprocess, "Yolov5PreProcess",
+                             stream_name);
 
   ThreadSafeQueueWithCapacity<buf_tup_t> yolov5_input_queue(queue_size);
   yolov5_preprocess_node.SetInputQueue(&preprocess_input_queue);

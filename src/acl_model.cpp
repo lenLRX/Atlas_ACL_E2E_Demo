@@ -1,7 +1,7 @@
 #include "acl_model.h"
 #include "app_profiler.h"
-#include "util.h"
 #include "dev_mem_pool.h"
+#include "util.h"
 
 #include <sstream>
 

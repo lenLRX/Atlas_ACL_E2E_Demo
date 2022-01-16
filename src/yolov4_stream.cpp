@@ -81,7 +81,6 @@ private:
 
 using namespace std::chrono_literals;
 
-
 Yolov4Model::Yolov4Model(const std::string &path, aclrtStream stream)
     : yolov4_model(stream), model_stream(stream) {
   yolov4_model.Init(path.c_str());
@@ -95,9 +94,9 @@ Yolov4Model::OutTy Yolov4Model::Process(Yolov4Model::InTy bufferx2) {
   return {output_buffers, std::get<0>(bufferx2)};
 }
 
-Yolov4PostProcess::Yolov4PostProcess(int width, int height,
-                                     int model_width, int model_height,
-                                     int box_num, int class_num)
+Yolov4PostProcess::Yolov4PostProcess(int width, int height, int model_width,
+                                     int model_height, int box_num,
+                                     int class_num)
     : width(width), height(height), box_num(box_num), class_num(class_num) {
   h_ratio = height / (float)model_height;
   w_ratio = width / (float)model_width;
@@ -289,8 +288,7 @@ void Yolov4StreamThread(json config, int id) {
   ThreadSafeQueueWithCapacity<Yolov4Model::OutTy> dummy_output_queue(
       queue_size);
 
-  Yolov4PostProcess post_process(width, height,
-                                 model_width, model_height,
+  Yolov4PostProcess post_process(width, height, model_width, model_height,
                                  box_num, class_num);
   TaskNode<Yolov4PostProcess, Yolov4PostProcess::InTy, Yolov4PostProcess::OutTy>
       post_process_node(&post_process, "Yolov4PostProcess", stream_name);

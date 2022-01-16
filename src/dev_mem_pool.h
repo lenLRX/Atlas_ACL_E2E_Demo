@@ -1,8 +1,8 @@
 #ifndef __DEV_MEM_POOL_H__
 #define __DEV_MEM_POOL_H__
 
-#include <mutex>
 #include <list>
+#include <mutex>
 #include <unordered_map>
 
 #include "util.h"
@@ -11,29 +11,29 @@
 
 struct DevMemPoolEntry {
   DevMemPoolEntry() = default;
-  DevMemPoolEntry(void* p, size_t sz): dev_ptr_(p), size_(sz) {}
-  void* dev_ptr_;
+  DevMemPoolEntry(void *p, size_t sz) : dev_ptr_(p), size_(sz) {}
+  void *dev_ptr_;
   size_t size_;
 };
 
 class DevMemPool {
 public:
-  static DevMemPool& GetInstance() {
+  static DevMemPool &GetInstance() {
     static DevMemPool pool;
     return pool;
   }
 
-  static void* AllocDevMem(size_t size) {
+  static void *AllocDevMem(size_t size) {
 #ifdef USE_MEM_POOL
     return GetInstance().AllocDevMemImpl(size);
 #else
-    void* dev_mem = nullptr;
+    void *dev_mem = nullptr;
     CHECK_ACL(aclrtMalloc(&dev_mem, size, ACL_MEM_MALLOC_HUGE_FIRST));
     return dev_mem;
 #endif
   }
 
-  static void FreeDevMem(void* p) {
+  static void FreeDevMem(void *p) {
 #ifdef USE_MEM_POOL
     GetInstance().FreeDevMemImpl(p);
 #else
@@ -41,24 +41,23 @@ public:
 #endif
   }
 
-  static void* AllocDvppMem(size_t size) {
+  static void *AllocDvppMem(size_t size) {
 #ifdef USE_MEM_POOL
     return GetInstance().AllocDvppMemImpl(size);
 #else
-    void* dvpp_mem = nullptr;
+    void *dvpp_mem = nullptr;
     CHECK_ACL(acldvppMalloc(&dvpp_mem, size));
     return dvpp_mem;
 #endif
   }
 
-  static void FreeDvppMem(void* p) {
+  static void FreeDvppMem(void *p) {
 #ifdef USE_MEM_POOL
     GetInstance().FreeDvppMemImpl(p);
 #else
     CHECK_ACL(acldvppFree(p));
 #endif
   }
-  
 
 private:
   DevMemPool() {}
@@ -66,11 +65,11 @@ private:
     // TODO: release device memory?
   }
 
-  void* AllocDevMemImpl(size_t size) {
-    void* dev_mem = nullptr;
+  void *AllocDevMemImpl(size_t size) {
+    void *dev_mem = nullptr;
     {
       std::lock_guard<std::mutex> g(dev_mem_mtx_);
-      auto& list = dev_free_lists_[size];
+      auto &list = dev_free_lists_[size];
       if (!list.empty()) {
         dev_mem = list.front().dev_ptr_;
         list.pop_front();
@@ -88,20 +87,20 @@ private:
     return dev_mem;
   }
 
-  void FreeDevMemImpl(void* p) {
+  void FreeDevMemImpl(void *p) {
     {
       std::lock_guard<std::mutex> g(dev_mem_mtx_);
       DevMemPoolEntry entry = dev_using_memory_.at(p);
       dev_using_memory_.erase(p);
       dev_free_lists_[entry.size_].push_back(entry);
     }
-  }  
+  }
 
-  void* AllocDvppMemImpl(size_t size) {
-    void* dvpp_mem = nullptr;
+  void *AllocDvppMemImpl(size_t size) {
+    void *dvpp_mem = nullptr;
     {
       std::lock_guard<std::mutex> g(dvpp_mem_mtx_);
-      auto& list = dvpp_free_lists_[size];
+      auto &list = dvpp_free_lists_[size];
       if (!list.empty()) {
         dvpp_mem = list.front().dev_ptr_;
         list.pop_front();
@@ -119,7 +118,7 @@ private:
     return dvpp_mem;
   }
 
-  void FreeDvppMemImpl(void* p) {
+  void FreeDvppMemImpl(void *p) {
     {
       std::lock_guard<std::mutex> g(dvpp_mem_mtx_);
       DevMemPoolEntry entry = dvpp_using_memory_.at(p);
@@ -128,13 +127,12 @@ private:
     }
   }
 
-
   std::mutex dev_mem_mtx_;
   std::mutex dvpp_mem_mtx_;
-  std::unordered_map<void*, DevMemPoolEntry> dev_using_memory_;
+  std::unordered_map<void *, DevMemPoolEntry> dev_using_memory_;
   std::unordered_map<size_t, std::list<DevMemPoolEntry>> dev_free_lists_;
-  std::unordered_map<void*, DevMemPoolEntry> dvpp_using_memory_;
+  std::unordered_map<void *, DevMemPoolEntry> dvpp_using_memory_;
   std::unordered_map<size_t, std::list<DevMemPoolEntry>> dvpp_free_lists_;
 };
 
-#endif//__DEV_MEM_POOL_H__
+#endif //__DEV_MEM_POOL_H__

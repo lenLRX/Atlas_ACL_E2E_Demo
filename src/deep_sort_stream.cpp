@@ -6,6 +6,7 @@
 #include "app_profiler.h"
 #include "camera_input.h"
 #include "deep_sort_stream.h"
+#include "dev_mem_pool.h"
 #include "device_manager.h"
 #include "drawing.h"
 #include "dvpp_decoder.h"
@@ -19,7 +20,6 @@
 #include "util.h"
 #include "vpc_batch_crop.h"
 #include "vpc_resize.h"
-#include "dev_mem_pool.h"
 
 #define CHECK_PY_ERR(obj)                                                      \
   if (obj == NULL) {                                                           \

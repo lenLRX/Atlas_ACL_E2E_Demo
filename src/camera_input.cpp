@@ -1,7 +1,7 @@
 #include "camera_input.h"
 #include "app_profiler.h"
-#include "util.h"
 #include "dev_mem_pool.h"
+#include "util.h"
 
 #ifdef HAS_CAMERA
 extern "C" {

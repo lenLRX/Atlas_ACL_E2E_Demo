@@ -15,12 +15,12 @@
 
 #include "acl_cb_thread.h"
 #include "app_profiler.h"
+#include "dev_mem_pool.h"
 #include "device_manager.h"
 #include "signal_handler.h"
 #include "stream_factory.h"
 #include "task_node.h"
 #include "yolov3_stream.h"
-#include "dev_mem_pool.h"
 
 using namespace std::chrono_literals;
 
