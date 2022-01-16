@@ -6,6 +6,7 @@
 
 #include "acl_model.h"
 #include "util.h"
+#include "dev_mem_pool.h"
 
 using json = nlohmann::json;
 
@@ -22,8 +23,7 @@ void TestCase(json test_cfg, int test_iter) {
   ACLModel::DevBufferVec output;
 
   for (size_t input_size : model.GetInputBufferSizes()) {
-    void *buf;
-    CHECK_ACL(aclrtMalloc(&buf, input_size, ACL_MEM_MALLOC_HUGE_FIRST));
+    void *buf = DevMemPool::AllocDevMem(input_size);
     DeviceBufferPtr input_buffer;
     input_buffer = std::make_shared<DeviceBuffer>(
         buf, input_size, DeviceBuffer::DevMemDeleter());
@@ -31,8 +31,7 @@ void TestCase(json test_cfg, int test_iter) {
   }
 
   for (size_t output_size : model.GetOutputBufferSizes()) {
-    void *buf;
-    CHECK_ACL(aclrtMalloc(&buf, output_size, ACL_MEM_MALLOC_HUGE_FIRST));
+    void *buf = DevMemPool::AllocDevMem(output_size);
     DeviceBufferPtr output_buffer;
     output_buffer = std::make_shared<DeviceBuffer>(
         buf, output_size, DeviceBuffer::DevMemDeleter());

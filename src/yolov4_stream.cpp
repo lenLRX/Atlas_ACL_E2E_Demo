@@ -247,9 +247,9 @@ void Yolov4StreamThread(json config, int id) {
 
   ThreadSafeQueueWithCapacity<DeviceBufferPtr> resize_input_queue(queue_size);
   decoder.SetOutputQueue(&resize_input_queue);
-  decoder_node.Start(ctx);
 
   if (camera_id < 0) {
+    decoder_node.Start(ctx);
     decoder.Init(cb_decoder_thread.GetPid(), height, width,
                  ffmpeg_input.GetProfile());
     decoder.SetDeviceCtx(&ctx);

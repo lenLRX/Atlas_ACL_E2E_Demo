@@ -1,6 +1,7 @@
 #include "camera_input.h"
 #include "app_profiler.h"
 #include "util.h"
+#include "dev_mem_pool.h"
 
 #ifdef HAS_CAMERA
 extern "C" {
@@ -101,8 +102,7 @@ void CameraInput::Run() {
   while (running) {
     APP_PROFILE(CameraInput::Run);
     // uint8_t *camera_buffer = (uint8_t *)malloc(cam_buffer_size);
-    void *camera_buffer;
-    CHECK_ACL(acldvppMalloc(&camera_buffer, cam_buffer_size));
+    void *camera_buffer = DevMemPool::AllocDvppMem(cam_buffer_size);
     int ret = ReadFrameFromCamera(camera_id, camera_buffer, &cam_buffer_size);
     if (ret != LIBMEDIA_STATUS_OK) {
       std::cerr << "ReadFrameFromCamera failed, camera id: " << camera_id

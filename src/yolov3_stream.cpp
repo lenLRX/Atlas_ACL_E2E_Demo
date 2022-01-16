@@ -20,6 +20,7 @@
 #include "stream_factory.h"
 #include "task_node.h"
 #include "yolov3_stream.h"
+#include "dev_mem_pool.h"
 
 using namespace std::chrono_literals;
 
@@ -35,9 +36,7 @@ Yolov3Model::Yolov3Model(const std::string &path, aclrtStream stream)
 Yolov3Model::OutTy Yolov3Model::Process(Yolov3Model::InTy bufferx2) {
   APP_PROFILE(Yolov3Model);
   size_t img_info_size = yolov3_model.GetInputBufferSizes()[1];
-  void *device_img_info;
-  CHECK_ACL(
-      aclrtMalloc(&device_img_info, img_info_size, ACL_MEM_MALLOC_HUGE_FIRST));
+  void *device_img_info = DevMemPool::AllocDevMem(img_info_size);
 
   float *host_img_info;
   if (IsDeviceMode()) {
@@ -156,9 +155,9 @@ void Yolov3StreamThread(json config, int id) {
 
   ThreadSafeQueueWithCapacity<DeviceBufferPtr> resize_input_queue(queue_size);
   decoder.SetOutputQueue(&resize_input_queue);
-  decoder_node.Start(ctx);
 
   if (camera_id < 0) {
+    decoder_node.Start(ctx);
     decoder.Init(cb_decoder_thread.GetPid(), height, width,
                  ffmpeg_input.GetProfile());
     decoder.SetDeviceCtx(&ctx);

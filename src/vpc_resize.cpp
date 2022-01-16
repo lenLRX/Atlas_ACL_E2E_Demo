@@ -35,8 +35,7 @@ VPCResizeEngine::OutTy VPCResizeEngine::Process(DeviceBufferPtr pdata) {
   acldvppPicDesc *input_desc = acldvppCreatePicDesc();
   acldvppPicDesc *output_desc = acldvppCreatePicDesc();
 
-  void *dvpp_mem;
-  CHECK_ACL(acldvppMalloc(&dvpp_mem, output_buffer_size));
+  void *dvpp_mem = DevMemPool::AllocDvppMem(output_buffer_size);
 
   DeviceBufferPtr resized_data = std::make_shared<DeviceBuffer>(
       dvpp_mem, output_buffer_size, DeviceBuffer::DvppMemDeleter());

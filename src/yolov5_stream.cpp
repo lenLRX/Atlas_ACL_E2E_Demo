@@ -27,6 +27,7 @@
 #include "stream_factory.h"
 #include "task_node.h"
 #include "yolov5_stream.h"
+#include "dev_mem_pool.h"
 
 #define CHECK_PY_ERR(obj)                                                      \
   if (obj == NULL) {                                                           \
@@ -154,8 +155,7 @@ Yolov5PreProcess::OutTy Yolov5PreProcess::ProcessWithNeon(Yolov5PreProcess::InTy
 
   int input_size = height * width * 3 * sizeof(float);
 
-  void *buf;
-    CHECK_ACL(aclrtMalloc(&buf, input_size, ACL_MEM_MALLOC_HUGE_FIRST));
+  void *buf = DevMemPool::AllocDevMem(input_size);
 
   auto dev_buffer_ptr = std::make_shared<DeviceBuffer>(
         buf, input_size, DeviceBuffer::DevMemDeleter());
@@ -188,8 +188,7 @@ Yolov5PreProcess::OutTy Yolov5PreProcess::ProcessWithoutNeon(Yolov5PreProcess::I
 
   int input_size = height * width * 3 * sizeof(float);
 
-  void *buf;
-    CHECK_ACL(aclrtMalloc(&buf, input_size, ACL_MEM_MALLOC_HUGE_FIRST));
+  void *buf = DevMemPool::AllocDevMem(input_size);
 
   auto dev_buffer_ptr = std::make_shared<DeviceBuffer>(
         buf, input_size, DeviceBuffer::DevMemDeleter());
@@ -828,9 +827,9 @@ void Yolov5StreamThread(json config, int id) {
 
   ThreadSafeQueueWithCapacity<DeviceBufferPtr> resize_input_queue(queue_size);
   decoder.SetOutputQueue(&resize_input_queue);
-  decoder_node.Start(ctx);
 
   if (camera_id < 0) {
+    decoder_node.Start(ctx);
     decoder.Init(cb_decoder_thread.GetPid(), height, width,
                  ffmpeg_input.GetProfile());
     decoder.SetDeviceCtx(&ctx);

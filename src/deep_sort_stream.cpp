@@ -19,6 +19,7 @@
 #include "util.h"
 #include "vpc_batch_crop.h"
 #include "vpc_resize.h"
+#include "dev_mem_pool.h"
 
 #define CHECK_PY_ERR(obj)                                                      \
   if (obj == NULL) {                                                           \
@@ -190,9 +191,7 @@ DeepSortCropProcess::OutTy DeepSortCropProcess::Process(InTy input) {
 
   for (int i = 0; i < valid_box_count; i += deepsort_batch_size) {
     int batch_size = std::min(deepsort_batch_size, valid_box_count - i);
-    void *device_img_info;
-    CHECK_ACL(aclrtMalloc(&device_img_info, batch_feature_size,
-                          ACL_MEM_MALLOC_HUGE_FIRST));
+    void *device_img_info = DevMemPool::AllocDevMem(batch_feature_size);
 
     DeviceBufferPtr feature_batch = std::make_shared<DeviceBuffer>(
         device_img_info, batch_feature_size, DeviceBuffer::DevMemDeleter());

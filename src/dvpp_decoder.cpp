@@ -1,4 +1,5 @@
 #include "dvpp_decoder.h"
+#include "dev_mem_pool.h"
 
 #include <atomic>
 
@@ -22,6 +23,11 @@ static void DvppDecCallback(acldvppStreamDesc *input, acldvppPicDesc *output,
       output_buffer, pic_size, DeviceBuffer::DvppMemDeleter());
 
   ctx->decoder->GetOutputQueue()->push(host_output_buffer);
+
+  void* input_ptr = acldvppGetStreamDescData(input);
+  if (input_ptr != nullptr) {
+    DevMemPool::FreeDvppMem(input_ptr);
+  }
 
   av_packet_unref((AVPacket *)ctx->pkt);
   delete ctx->pkt;
@@ -83,16 +89,11 @@ aclError DvppDecoder::SendFrame(AVPacket *packet) {
 
   acldvppStreamDesc *stream_desc = acldvppCreateStreamDesc();
 
-  DeviceBufferPtr input_dev_buffer;
-
   if (!IsDeviceMode()) {
-    void *input_buffer;
-    CHECK_ACL(acldvppMalloc(&input_buffer, input_size));
+    void *input_buffer = DevMemPool::AllocDvppMem(input_size);
     CHECK_ACL(aclrtMemcpy(input_buffer, input_size, frame_packet->data,
                           input_size, ACL_MEMCPY_HOST_TO_DEVICE));
     CHECK_ACL(acldvppSetStreamDescData(stream_desc, input_buffer));
-    input_dev_buffer = std::make_shared<DeviceBuffer>(
-        input_buffer, input_size, DeviceBuffer::DvppMemDeleter());
   } else {
     CHECK_ACL(acldvppSetStreamDescData(stream_desc, frame_packet->data));
   }
@@ -105,8 +106,7 @@ aclError DvppDecoder::SendFrame(AVPacket *packet) {
 
   acldvppPicDesc *output = acldvppCreatePicDesc();
 
-  void *output_buffer;
-  CHECK_ACL(acldvppMalloc(&output_buffer, output_size));
+  void *output_buffer = DevMemPool::AllocDvppMem(output_size);
   acldvppSetPicDescData(output, output_buffer);
   acldvppSetPicDescSize(output, output_size);
   acldvppSetPicDescFormat(output, PIXEL_FORMAT_YUV_SEMIPLANAR_420);

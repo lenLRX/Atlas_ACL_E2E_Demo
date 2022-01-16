@@ -22,6 +22,7 @@ endif()
 message(STATUS "build with libmedia ${HAS_LIBMEDIA}")
 
 #Compile options
+#add_compile_options(-std=c++17 -O0 -g)
 add_compile_options(-std=c++17 -O2)
 
 find_package(Freetype REQUIRED)
@@ -87,6 +88,8 @@ add_library(acl_demo SHARED
 
 if (${HAS_LIBMEDIA})
         target_compile_definitions(acl_demo PUBLIC HAS_CAMERA)
+        # Do not enable mem pool in atlas300I, since I don't have env to test
+        target_compile_definitions(acl_demo PUBLIC USE_MEM_POOL)
 endif()
 
 set(DEMO_DEP_LIBS

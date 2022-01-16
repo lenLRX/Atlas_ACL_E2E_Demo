@@ -4,6 +4,7 @@
 #include "acl/acl.h"
 
 #include "util.h"
+#include "dev_mem_pool.h"
 
 #include <functional>
 #include <memory>
@@ -55,13 +56,13 @@ public:
   }
 
   static DeleteFn DevMemDeleter() {
-    return [](void *dev_ptr) { CHECK_ACL(aclrtFree(dev_ptr)); };
+    return [](void *dev_ptr) { DevMemPool::FreeDevMem(dev_ptr); };
   }
 
   static DeleteFn DvppMemDeleter() {
-    return [](void *dev_ptr) { CHECK_ACL(acldvppFree(dev_ptr)); };
+    return [](void *dev_ptr) { DevMemPool::FreeDvppMem(dev_ptr); };
   }
-
+  
 private:
   void *host_buffer;
   void *device_buffer;

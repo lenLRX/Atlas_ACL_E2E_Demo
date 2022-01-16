@@ -1,6 +1,7 @@
 #include "acl_model.h"
 #include "app_profiler.h"
 #include "util.h"
+#include "dev_mem_pool.h"
 
 #include <sstream>
 
@@ -54,9 +55,7 @@ ACLModel::DevBufferVec ACLModel::Infer(const DevBufferVec &inputs) {
 
   for (size_t i = 0; i < model_output_num; ++i) {
     size_t buffer_size = aclmdlGetOutputSizeByIndex(model_desc, i);
-    void *output_buffer;
-    CHECK_ACL(
-        aclrtMalloc(&output_buffer, buffer_size, ACL_MEM_MALLOC_HUGE_FIRST));
+    void *output_buffer = DevMemPool::AllocDevMem(buffer_size);
     auto dev_buffer_ptr = std::make_shared<DeviceBuffer>(
         output_buffer, buffer_size, DeviceBuffer::DevMemDeleter());
     result.emplace_back(dev_buffer_ptr);
