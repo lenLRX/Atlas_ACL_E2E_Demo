@@ -808,6 +808,16 @@ void Yolov5StreamThread(json config, int id) {
   std::string input_addr = config.at("src");
   std::string output_addr = config.at("dst");
   std::string model_path = config.at("yolov5_model_path");
+  // yolov5 default to commit e96c74b5a1c4a27934c5d8ad52cde778af248ed8
+  std::string yolov5_version = "v5";
+  if (config.count("yolov5_version")) {
+    yolov5_version = config.at("yolov5_version").get<std::string>();
+  }
+  else {
+    std::cout << "yolov5 model version not set in json, default to \"v5\"" << std::endl;
+    std::cout << "\"yolov5_version\" available options: {\"v5\", \"v6\"}" << std::endl;
+  }
+
   int model_height = config.at("model_height");
   int model_width = config.at("model_width");
   bool is_null_output = output_addr == "null";
@@ -892,9 +902,12 @@ void Yolov5StreamThread(json config, int id) {
                              stream_name);
 
   ThreadSafeQueueWithCapacity<buf_tup_t> yolov5_input_queue(queue_size);
-  yolov5_preprocess_node.SetInputQueue(&preprocess_input_queue);
-  yolov5_preprocess_node.SetOutputQueue(&yolov5_input_queue);
-  yolov5_preprocess_node.Start(ctx);
+
+  if (yolov5_version == "v5") {
+    yolov5_preprocess_node.SetInputQueue(&preprocess_input_queue);
+    yolov5_preprocess_node.SetOutputQueue(&yolov5_input_queue);
+    yolov5_preprocess_node.Start(ctx);
+  }
 
   aclrtStream model_stream;
   CHECK_ACL(aclrtCreateStream(&model_stream));
@@ -903,7 +916,12 @@ void Yolov5StreamThread(json config, int id) {
   TaskNode<Yolov5Model, Yolov5Model::InTy, Yolov5Model::OutTy>
       yolov5_model_node(&yolov5_model, "Yolov5Model", stream_name);
 
-  yolov5_model_node.SetInputQueue(&yolov5_input_queue);
+  if (yolov5_version == "v5") {
+    yolov5_model_node.SetInputQueue(&yolov5_input_queue);
+  }
+  else {
+    yolov5_model_node.SetInputQueue(&preprocess_input_queue);
+  }
 
   ThreadSafeQueueWithCapacity<Yolov5Model::OutTy> yolov5_output_queue(
       queue_size);
@@ -989,7 +1007,9 @@ void Yolov5StreamThread(json config, int id) {
   }
 
   resize_engine_node.Join();
-  yolov5_preprocess_node.Join();
+  if (yolov5_version == "v5") {
+    yolov5_preprocess_node.Join();
+  }
   yolov5_model_node.Join();
   null_out_node.Join();
   post_process_node.Join();

@@ -1,0 +1,20 @@
+{
+    "streams": [
+        {
+            "name": "yolov5_demo_stream1",
+            "stream_type": "yolov5_demo",
+            "src": "freecar.mp4",
+            "dst": "freecar_yolov5_v5.mp4",
+            "model_height" : 640,
+            "model_width" : 640,
+            "hw_encoder": true,
+            "enable_neon": true,
+            "yolov5_version": "v5",
+            "yolov5_model_path": "./model/yolov5s_truncate.om"
+        }
+    ],
+    "config": {
+        "app_perf": true,
+        "perflog_path": "."
+    }
+}

@@ -4,12 +4,13 @@
             "name": "yolov5_demo_stream1",
             "stream_type": "yolov5_demo",
             "src": "freecar.mp4",
-            "dst": "freecar_yolov5.mp4",
+            "dst": "freecar_yolov5_v6.mp4",
             "model_height" : 640,
             "model_width" : 640,
             "hw_encoder": true,
-            "enable_neon": true,
-            "yolov5_model_path": "./model/yolov5s_truncate.om"
+            "enable_neon": false,
+            "yolov5_version": "v6",
+            "yolov5_model_path": "./model/yolov5s_v6.om"
         }
     ],
     "config": {
