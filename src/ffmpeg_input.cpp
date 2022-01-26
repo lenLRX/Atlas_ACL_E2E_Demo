@@ -49,6 +49,8 @@ int FFMPEGInput::Init(const std::string &addr) {
   }
 
   av_cc = av_fc->streams[video_stream]->codec;
+  AVRational frame_rate = av_guess_frame_rate(av_fc, av_fc->streams[video_stream], NULL);
+  av_cc->framerate = frame_rate;
 
   // av_read_play(av_fc);
 

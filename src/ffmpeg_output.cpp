@@ -15,9 +15,9 @@
 */
 static std::string GuessFormatFromName(const std::string &name) {
   std::string format;
-  if (name.find("rtmp") == 0) {
+  if (name.find("rtmp:") == 0) {
     format = "flv";
-  } else if (name.find("rtsp") == 0) {
+  } else if (name.find("rtsp:") == 0) {
     format = "rtsp";
   }
   return format;
@@ -118,6 +118,10 @@ int FFMPEGOutput::Init(std::string name, int img_h, int img_w,
   ret = avcodec_open2(video_avcc, video_avc, &codec_options);
   if (ret < 0) {
     std::cerr << "[FFMPEGOutput::Init] avformat_new_stream failed" << std::endl;
+    char err_buf[AV_ERROR_MAX_STRING_SIZE] = {0};
+    std::cerr << "[FFMPEGInput::Init] err string: "
+              << av_make_error_string(err_buf, AV_ERROR_MAX_STRING_SIZE, ret)
+              << std::endl;
     return ret;
   }
 
