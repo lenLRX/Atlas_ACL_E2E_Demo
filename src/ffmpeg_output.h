@@ -11,6 +11,7 @@ extern "C" {
 #include <chrono>
 #include <string>
 #include <tuple>
+#include <fstream>
 
 #include "acl_model.h"
 
@@ -55,6 +56,7 @@ private:
   bool output_is_file;
 
   bool valid{false};
+  std::ofstream h264_of;
 };
 
 #endif //__FFMPEG_OUTPUT_H__

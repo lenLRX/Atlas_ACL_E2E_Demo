@@ -6,6 +6,8 @@
 #include <iostream>
 #include <thread>
 
+#include <x264.h>
+
 /*
   Parse format from name
   rtmp   -> "flv"
@@ -40,6 +42,8 @@ int FFMPEGOutput::Init(std::string name, int img_h, int img_w,
   stream_name = name;
   const char *output = stream_name.c_str();
   const char *profile = "high444";
+
+  h264_of = std::ofstream("test264.h264", std::ios::binary);
 
   std::string format = GuessFormatFromName(name);
 
@@ -103,6 +107,7 @@ int FFMPEGOutput::Init(std::string name, int img_h, int img_w,
   avs = avformat_new_stream(encoder_avfc, video_avc);
 
   ret = avcodec_parameters_from_context(avs->codecpar, video_avcc);
+  avs->avg_frame_rate = frame_rate;
 
   if (ret < 0) {
     std::cerr << "[FFMPEGOutput::Init] avcodec_parameters_from_context failed"
@@ -130,7 +135,13 @@ int FFMPEGOutput::Init(std::string name, int img_h, int img_w,
 
   av_dump_format(encoder_avfc, 0, output, 1);
 
-  ret = avformat_write_header(encoder_avfc, NULL);
+  AVDictionary* mux_options = NULL;
+  
+  av_dict_set_int(&mux_options, "no_metadata", 1, 0);
+  av_dict_set_int(&mux_options, "add_keyframe_index", 1, 0);
+  av_dict_set_int(&mux_options, "no_duration_filesize", 1, 0);
+
+  ret = avformat_write_header(encoder_avfc, &mux_options);
   if (ret < 0) {
     std::cerr << "[FFMPEGOutput::init] avformat_write_header failed"
               << std::endl;
@@ -146,7 +157,7 @@ int FFMPEGOutput::Init(std::string name, int img_h, int img_w,
   video_frame->width = video_avcc->width;
   video_frame->height = video_avcc->height;
   video_frame->format = video_avcc->pix_fmt;
-  video_frame->pts = 1;
+  video_frame->pts = 0;
 
   valid = true;
   std::ifstream test_f(name.c_str());
@@ -229,24 +240,91 @@ void FFMPEGOutput::Process(std::tuple<void *, uint32_t> buffer) {
   SendEncodedFrame(std::get<0>(buffer), std::get<1>(buffer));
 }
 
+enum NALUType {
+  UNSPECIFIED = 0,
+  SLICE_NON_IDR = 1,
+  SLICE_DPA = 2,
+  SLICE_DPB = 3,
+  SLICE_DPC = 4,
+  SLICE_IDR = 5,
+  SLICE_SEI = 6,
+  SPS = 7,
+  PPS = 8
+};
+
+
+
+static AVPacket* process_nal(void* pdata, int size) {
+  AVPacket* packet = av_packet_alloc();
+  std::vector<int> start_offsets;
+  start_offsets.reserve(4);
+  std::vector<NALUType> nalu_types;
+  nalu_types.reserve(4);
+  std::vector<int> end_offsets;
+  end_offsets.reserve(4);
+  std::vector<int> sizes;
+  sizes.reserve(4);
+
+  uint8_t* u8_ptr = (uint8_t*)pdata;
+  int prev_offset = 0;
+  for (int offset = 0;offset < size - 4; ++offset) {
+    uint8_t* off_ptr = u8_ptr + offset;
+    if (off_ptr[0] == 0 && off_ptr[1] == 0 && off_ptr[2] == 0 && off_ptr[3] == 1) {
+      NALUType ty = (NALUType)(off_ptr[4]&0x1f);
+      nalu_types.push_back(ty);
+      start_offsets.push_back(offset);
+      std::cout << "found start code @" << offset << " NAL type: " << (off_ptr[4]&0x1f) << std::endl;
+    }
+  }
+
+  int nal_size = start_offsets.size();
+  for (int i = 1;i < nal_size; ++i) {
+    end_offsets.push_back(start_offsets[i]);
+  }
+  end_offsets.push_back(size);
+
+  for (int i = 0;i < nal_size; ++i) {
+    sizes.push_back(end_offsets[i] - start_offsets[i]);
+  }
+
+  int frame_no = 0;
+  if (nalu_types[0] == SPS && nalu_types[1] == PPS) {
+    std::cout << "write SPS and PPS" << std::endl;
+    frame_no = 2;
+    int extra_size = sizes[0] + sizes[1];
+    uint8_t* new_extra_data = (uint8_t*)av_malloc(extra_size);
+    memcpy(new_extra_data, u8_ptr, extra_size);
+
+    av_packet_add_side_data(packet, AV_PKT_DATA_NEW_EXTRADATA, new_extra_data, extra_size);
+  }
+
+  int pkt_data_size = sizes[frame_no];
+  uint8_t* u8_pkt_data = (uint8_t*)av_malloc(pkt_data_size + AV_INPUT_BUFFER_PADDING_SIZE);
+  memcpy(u8_pkt_data, u8_ptr + start_offsets[frame_no], sizes[frame_no]);
+  av_packet_from_data(packet, u8_pkt_data, pkt_data_size);
+
+  if (nalu_types[frame_no] == SLICE_IDR) {
+    packet->flags |= AV_PKT_FLAG_KEY;
+  }
+
+  free(pdata);
+
+  return packet;
+
+}
+
 void FFMPEGOutput::SendEncodedFrame(void *pdata, int size) {
+  //std::cout << "h264 writting at " << h264_of.tellp() << " size " << size << std::endl;
+  //h264_of.write((const char*)pdata, size);
   Wait4Stream();
   APP_PROFILE(FFMPEGOutput::SendEncodedFrame);
   int ret = 0;
-  AVPacket pkt = {0};
-  av_init_packet(&pkt);
+  AVPacket* pkt = process_nal(pdata, size);
 
-  pkt.pts = video_frame->pts;
-  pkt.dts = pkt.pts;
-  pkt.flags = AV_PKT_FLAG_KEY;
-  // av_packet_from_data(&pkt, (uint8_t*)pdata, size);
+  pkt->pts = video_frame->pts;
+  pkt->dts = pkt->pts;
 
-  pkt.buf = av_buffer_create((uint8_t *)pdata, size, custom_free, NULL, 0);
-
-  pkt.data = (uint8_t *)pdata;
-  pkt.size = size;
-
-  ret = av_write_frame(encoder_avfc, &pkt);
+  ret = av_write_frame(encoder_avfc, pkt);
 
   if (ret < 0) {
     std::cerr << "[FFMPEGOutput::SendFrame] av_interleaved_write_frame failed"
@@ -254,11 +332,10 @@ void FFMPEGOutput::SendEncodedFrame(void *pdata, int size) {
     return;
   }
 
-  // pkt.buf = nullptr;
-
-  av_packet_unref(&pkt);
+  av_packet_free(&pkt);
 
   video_frame->pts += av_rescale_q(1, video_avcc->time_base, avs->time_base);
+  std::cout << "curr pts: " << video_frame->pts << std::endl;
 }
 
 void FFMPEGOutput::Close() {
