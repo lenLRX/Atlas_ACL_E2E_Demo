@@ -61,6 +61,7 @@ static void EncoderCallback(acldvppPicDesc *input, acldvppStreamDesc *output,
   auto *queue = encoder->GetOutputQueue();
   queue->push(std::make_tuple(host_buffer, data_size));
   delete ctx;
+  CHECK_ACL(acldvppDestroyPicDesc(input));
 }
 
 DvppEncoder::DvppEncoder() {
