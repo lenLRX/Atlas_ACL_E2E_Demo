@@ -166,7 +166,7 @@ cd run_package/
 将Ascend-cann-nnrt_*-aarch64.run传到/root目录下,直接安装:
 ```
 chmod +x Ascend-cann-nnrt_*-aarch64.run
-./Ascend-cann-nnrt_*-aarch64.run --install --chip=Ascend310-minirc
+./Ascend-cann-nnrt_*-aarch64.run --devel --chip=Ascend310-minirc
 ```
 
 ## 安装demo
