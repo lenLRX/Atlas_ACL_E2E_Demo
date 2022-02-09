@@ -48,9 +48,10 @@ void TestCase(json test_cfg, int test_iter) {
   microseconds duration_us = duration_cast<microseconds>(duration);
   auto duration_s = duration_us.count() / 1000.f / 1000.f;
   auto batch_time = duration_s / test_iter;
+  auto batch_ms = duration_us.count() / 1000.f  / test_iter;
   auto fps = 1 / batch_time * batch_size;
   std::cout << "model: " << model_path << " batch_size: " << batch_size
-            << " fps: " << fps << std::endl;
+            << " fps: " << fps << " " << batch_ms << "ms/batch " << std::endl;
 }
 
 int main(int argc, char **argv) {

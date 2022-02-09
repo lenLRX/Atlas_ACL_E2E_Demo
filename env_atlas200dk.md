@@ -163,15 +163,10 @@ cd run_package/
 ### 5.0.4 及以后的版本
 以下操作使用root用户执行
 
-将Ascend-cann-nnrt_*-aarch64.run传到/root目录下,首先解压:
+将Ascend-cann-nnrt_*-aarch64.run传到/root目录下,直接安装:
 ```
 chmod +x Ascend-cann-nnrt_*-aarch64.run
-./Ascend-cann-nnrt_*-aarch64.run --extract=. --noexec
-```
-然后安装acllib
-```
-cd run_package/
-./CANN-runtime*.run --full
+./Ascend-cann-nnrt_*-aarch64.run --install --chip=Ascend310-minirc
 ```
 
 ## 安装demo
