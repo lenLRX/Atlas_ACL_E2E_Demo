@@ -81,6 +81,8 @@ set(DEMO_LIB_SRC
         src/yolov3_stream.cpp
         src/yolov4_stream.cpp
         src/yolov5_stream.cpp
+        src/yolox_stream.cpp
+        src/focus_op.cpp
         src/signal_handler.cpp
         src/deep_sort_stream.cpp
         src/stream_factory.cpp

@@ -27,7 +27,7 @@
 #include "signal_handler.h"
 #include "stream_factory.h"
 #include "task_node.h"
-#include "yolov5_stream.h"
+#include "yolox_stream.h"
 #include "focus_op.h"
 
 #define CHECK_PY_ERR(obj)                                                      \
@@ -37,17 +37,17 @@
   }
 
 // https://github.com/numpy/numpy/issues/11925
-class Yolov5PyEnv {
+class YoloXPyEnv {
 public:
-  static Yolov5PyEnv &GetInstance() {
-    static Yolov5PyEnv env;
+  static YoloXPyEnv &GetInstance() {
+    static YoloXPyEnv env;
     return env;
   }
 
   PyObject *GetPostProcessFn() const { return post_processing_fn; }
 
 private:
-  Yolov5PyEnv() {
+  YoloXPyEnv() {
     Py_Initialize();
     { // expansion of macro import_array
       if (_import_array() < 0) {
@@ -57,14 +57,14 @@ private:
       }
     }
     numpy = PyImport_ImportModule("numpy");
-    yolov5_module = PyImport_ImportModule("yolov5");
-    if (yolov5_module == NULL) {
+    yolox_module = PyImport_ImportModule("yolox");
+    if (yolox_module == NULL) {
       PyErr_Print();
       return;
     }
 
     post_processing_fn =
-        PyObject_GetAttrString(yolov5_module, "post_processing");
+        PyObject_GetAttrString(yolox_module, "post_processing");
     if (post_processing_fn == NULL) {
       PyErr_Print();
       return;
@@ -74,24 +74,25 @@ private:
     _save = PyEval_SaveThread();
   }
 
-  ~Yolov5PyEnv() {
+  ~YoloXPyEnv() {
     PyEval_RestoreThread(_save);
     Py_FinalizeEx();
   }
 
   PyThreadState *_save;
   PyObject *numpy;
-  PyObject *yolov5_module;
+  PyObject *yolox_module;
   PyObject *post_processing_fn;
 };
 
 using namespace std::chrono_literals;
 
-Yolov5PreProcess::Yolov5PreProcess(int w, int h, bool enable_neon)
+YoloXPreProcess::YoloXPreProcess(int w, int h, bool enable_neon)
     : width(w), height(h), enable_neon(enable_neon) {}
 
-Yolov5PreProcess::OutTy
-Yolov5PreProcess::Process(Yolov5PreProcess::InTy bufferx2) {
+
+YoloXPreProcess::OutTy
+YoloXPreProcess::Process(YoloXPreProcess::InTy bufferx2) {
 #ifdef __ARM_NEON
   const bool has_neon = true;
 #else
@@ -103,9 +104,9 @@ Yolov5PreProcess::Process(Yolov5PreProcess::InTy bufferx2) {
   return ProcessWithoutNeon(bufferx2);
 }
 
-Yolov5PreProcess::OutTy
-Yolov5PreProcess::ProcessWithNeon(Yolov5PreProcess::InTy bufferx2) {
-  APP_PROFILE(Yolov5PreProcessWithNeon);
+YoloXPreProcess::OutTy
+YoloXPreProcess::ProcessWithNeon(YoloXPreProcess::InTy bufferx2) {
+  APP_PROFILE(YoloXPreProcessWithNeon);
   uint8_t *host_buffer = (uint8_t *)std::get<1>(bufferx2)->GetHostPtr();
 
   int input_size = height * width * 3 * sizeof(float);
@@ -116,16 +117,16 @@ Yolov5PreProcess::ProcessWithNeon(Yolov5PreProcess::InTy bufferx2) {
       buf, input_size, DeviceBuffer::DevMemDeleter());
 
   CvtFocusNEONFuse(height, width, (float *)dev_buffer_ptr->GetHostPtr(),
-                   (uint8_t *)host_buffer);
+                   (uint8_t *)host_buffer, 1.0);
 
   dev_buffer_ptr->CopyToDevice();
 
   return {std::get<0>(bufferx2), dev_buffer_ptr};
 }
 
-Yolov5PreProcess::OutTy
-Yolov5PreProcess::ProcessWithoutNeon(Yolov5PreProcess::InTy bufferx2) {
-  APP_PROFILE(Yolov5PreProcessWithoutNeon);
+YoloXPreProcess::OutTy
+YoloXPreProcess::ProcessWithoutNeon(YoloXPreProcess::InTy bufferx2) {
+  APP_PROFILE(YoloXPreProcessWithoutNeon);
   uint8_t *host_buffer = (uint8_t *)std::get<1>(bufferx2)->GetHostPtr();
   cv::Mat input_img(height * 3 / 2, width, CV_8UC1, host_buffer);
   cv::Mat output_img(height, width, CV_8UC3);
@@ -156,9 +157,10 @@ Yolov5PreProcess::ProcessWithoutNeon(Yolov5PreProcess::InTy bufferx2) {
     APP_PROFILE(IMG_U8_TO_FLOAT);
     focus_format_img.convertTo(output_float, CV_32FC3);
   }
+  // yolox does not need to scale
   {
-    APP_PROFILE(IMG_DIV_255);
-    output_float *= 0.00392156862745098;
+    //APP_PROFILE(IMG_DIV_255);
+    //output_float *= 0.00392156862745098;
   }
 
   // FocusTransform<float>(height, width, (float*)dev_buffer_ptr->GetHostPtr(),
@@ -170,29 +172,29 @@ Yolov5PreProcess::ProcessWithoutNeon(Yolov5PreProcess::InTy bufferx2) {
 }
 
 
-Yolov5Model::Yolov5Model(const std::string &path, aclrtStream stream)
-    : yolov5_model(stream), model_stream(stream) {
-  yolov5_model.Init(path.c_str());
-  std::cout << "YOLOv5 Model Info:" << std::endl;
-  std::cout << yolov5_model.ToString();
+YoloXModel::YoloXModel(const std::string &path, aclrtStream stream)
+    : yolox_model(stream), model_stream(stream) {
+  yolox_model.Init(path.c_str());
+  std::cout << "YOLOX Model Info:" << std::endl;
+  std::cout << yolox_model.ToString();
 }
 
-Yolov5Model::OutTy Yolov5Model::Process(Yolov5Model::InTy bufferx2) {
-  APP_PROFILE(Yolov5Model);
-  auto output_buffers = yolov5_model.Infer({std::get<1>(bufferx2)});
+YoloXModel::OutTy YoloXModel::Process(YoloXModel::InTy bufferx2) {
+  APP_PROFILE(YoloXModel);
+  auto output_buffers = yolox_model.Infer({std::get<1>(bufferx2)});
   return {output_buffers, std::get<0>(bufferx2)};
 }
 
-Yolov5PostProcess::Yolov5PostProcess(int width, int height, int model_width,
+YoloXPostProcess::YoloXPostProcess(int width, int height, int model_width,
                                      int model_height)
     : width(width), height(height) {
   h_ratio = height / (float)model_height;
   w_ratio = width / (float)model_width;
 }
 
-Yolov5PostProcess::OutTy Yolov5PostProcess::Process(InTy input) {
-  APP_PROFILE(Yolov5PostProcess);
-  Yolov5PyEnv &env = Yolov5PyEnv::GetInstance();
+YoloXPostProcess::OutTy YoloXPostProcess::Process(InTy input) {
+  APP_PROFILE(YoloXPostProcess);
+  YoloXPyEnv &env = YoloXPyEnv::GetInstance();
   const auto &infer_results = std::get<0>(input);
   auto image_buffer = std::get<1>(input);
 
@@ -200,7 +202,7 @@ Yolov5PostProcess::OutTy Yolov5PostProcess::Process(InTy input) {
 
   PyGILGuard py_gil_guard;
 
-  npy_intp pred_dim[3] = {1, 25200, 85};
+  npy_intp pred_dim[3] = {1, 8400, 85};
   const int pred_nd = 3;
 
   PyObject *pred_arr =
@@ -263,19 +265,10 @@ Yolov5PostProcess::OutTy Yolov5PostProcess::Process(InTy input) {
   return image_buffer;
 }
 
-void Yolov5StreamThread(json config, int id) {
+void YoloXStreamThread(json config, int id) {
   std::string input_addr = config.at("src");
   std::string output_addr = config.at("dst");
-  std::string model_path = config.at("yolov5_model_path");
-  // yolov5 default to commit e96c74b5a1c4a27934c5d8ad52cde778af248ed8
-  std::string yolov5_version = "v5";
-  if (config.count("yolov5_version")) {
-    yolov5_version = config.at("yolov5_version").get<std::string>();
-  }
-  else {
-    std::cout << "yolov5 model version not set in json, default to \"v5\"" << std::endl;
-    std::cout << "\"yolov5_version\" available options: {\"v5\", \"v6\"}" << std::endl;
-  }
+  std::string model_path = config.at("yolox_model_path");
 
   int model_height = config.at("model_height");
   int model_width = config.at("model_width");
@@ -354,65 +347,60 @@ void Yolov5StreamThread(json config, int id) {
   resize_engine_node.SetOutputQueue(&preprocess_input_queue);
   resize_engine_node.Start(ctx);
 
-  Yolov5PreProcess yolov5_preprocess(model_width, model_height, enable_neon);
+  YoloXPreProcess yolox_preprocess(model_width, model_height, enable_neon);
 
-  TaskNode<Yolov5PreProcess, Yolov5PreProcess::InTy, Yolov5PreProcess::OutTy>
-      yolov5_preprocess_node(&yolov5_preprocess, "Yolov5PreProcess",
+  TaskNode<YoloXPreProcess, YoloXPreProcess::InTy, YoloXPreProcess::OutTy>
+      yolox_preprocess_node(&yolox_preprocess, "YoloxPreProcess",
                              stream_name);
 
-  ThreadSafeQueueWithCapacity<buf_tup_t> yolov5_input_queue(queue_size);
+  ThreadSafeQueueWithCapacity<buf_tup_t> yolox_input_queue(queue_size);
 
-  if (yolov5_version == "v5") {
-    yolov5_preprocess_node.SetInputQueue(&preprocess_input_queue);
-    yolov5_preprocess_node.SetOutputQueue(&yolov5_input_queue);
-    yolov5_preprocess_node.Start(ctx);
-  }
+  yolox_preprocess_node.SetInputQueue(&preprocess_input_queue);
+  yolox_preprocess_node.SetOutputQueue(&yolox_input_queue);
+  yolox_preprocess_node.Start(ctx);
 
   aclrtStream model_stream;
   CHECK_ACL(aclrtCreateStream(&model_stream));
-  Yolov5Model yolov5_model(model_path, model_stream);
+  YoloXModel yolox_model(model_path, model_stream);
 
-  TaskNode<Yolov5Model, Yolov5Model::InTy, Yolov5Model::OutTy>
-      yolov5_model_node(&yolov5_model, "Yolov5Model", stream_name);
+  TaskNode<YoloXModel, YoloXModel::InTy, YoloXModel::OutTy>
+      yolox_model_node(&yolox_model, "YoloXModel", stream_name);
 
-  if (yolov5_version == "v5") {
-    yolov5_model_node.SetInputQueue(&yolov5_input_queue);
-  }
-  else {
-    yolov5_model_node.SetInputQueue(&preprocess_input_queue);
-  }
 
-  ThreadSafeQueueWithCapacity<Yolov5Model::OutTy> yolov5_output_queue(
+  yolox_model_node.SetInputQueue(&yolox_input_queue);
+  
+
+  ThreadSafeQueueWithCapacity<YoloXModel::OutTy> yolox_output_queue(
       queue_size);
-  yolov5_model_node.SetOutputQueue(&yolov5_output_queue);
-  yolov5_model_node.Start(ctx);
+  yolox_model_node.SetOutputQueue(&yolox_output_queue);
+  yolox_model_node.Start(ctx);
 
-  NullOutput<Yolov5PostProcess::InTy> null_out;
-  TaskNode<NullOutput<Yolov5PostProcess::InTy>, Yolov5PostProcess::InTy, void>
+  NullOutput<YoloXPostProcess::InTy> null_out;
+  TaskNode<NullOutput<YoloXPostProcess::InTy>, YoloXPostProcess::InTy, void>
       null_out_node(&null_out, "NullOutput", stream_name);
 
-  ThreadSafeQueueWithCapacity<Yolov5Model::OutTy> dummy_output_queue(
+  ThreadSafeQueueWithCapacity<YoloXModel::OutTy> dummy_output_queue(
       queue_size);
 
-  Yolov5PostProcess post_process(width, height, model_width, model_height);
-  TaskNode<Yolov5PostProcess, Yolov5PostProcess::InTy, Yolov5PostProcess::OutTy>
-      post_process_node(&post_process, "Yolov5PostProcess", stream_name);
+  YoloXPostProcess post_process(width, height, model_width, model_height);
+  TaskNode<YoloXPostProcess, YoloXPostProcess::InTy, YoloXPostProcess::OutTy>
+      post_process_node(&post_process, "YoloXPostProcess", stream_name);
 
   if (!is_null_output) {
-    post_process_node.SetInputQueue(&yolov5_output_queue);
+    post_process_node.SetInputQueue(&yolox_output_queue);
     null_out_node.SetInputQueue(&dummy_output_queue);
   } else {
     post_process_node.SetInputQueue(&dummy_output_queue);
-    null_out_node.SetInputQueue(&yolov5_output_queue);
+    null_out_node.SetInputQueue(&yolox_output_queue);
   }
 
   dummy_output_queue.ShutDown();
 
   null_out_node.Start(ctx);
 
-  ThreadSafeQueueWithCapacity<Yolov5PostProcess::OutTy>
-      yolov5_post_output_queue(queue_size);
-  post_process_node.SetOutputQueue(&yolov5_post_output_queue);
+  ThreadSafeQueueWithCapacity<YoloXPostProcess::OutTy>
+      yolox_post_output_queue(queue_size);
+  post_process_node.SetOutputQueue(&yolox_post_output_queue);
   post_process_node.Start(ctx);
 
   FFMPEGOutput ffmpeg_output;
@@ -439,12 +427,12 @@ void Yolov5StreamThread(json config, int id) {
   if (hardware_enc) {
     encoder.Init(cb_encoder_thread.GetPid(), height, width);
     encoder.SetOutputQueue(&encoder_output_queue);
-    encoder_node.SetInputQueue(&yolov5_post_output_queue);
+    encoder_node.SetInputQueue(&yolox_post_output_queue);
     ffmpeg_hw_output_node.SetInputQueue(&encoder_output_queue);
     ffmpeg_hw_output_node.Start(ctx);
     encoder_node.Start(ctx);
   } else {
-    ffmpeg_sw_output_node.SetInputQueue(&yolov5_post_output_queue);
+    ffmpeg_sw_output_node.SetInputQueue(&yolox_post_output_queue);
     ffmpeg_sw_output_node.Start(ctx);
   }
 
@@ -466,10 +454,8 @@ void Yolov5StreamThread(json config, int id) {
   }
 
   resize_engine_node.Join();
-  if (yolov5_version == "v5") {
-    yolov5_preprocess_node.Join();
-  }
-  yolov5_model_node.Join();
+  yolox_preprocess_node.Join();
+  yolox_model_node.Join();
   null_out_node.Join();
   post_process_node.Join();
   if (hardware_enc) {
@@ -493,6 +479,6 @@ void Yolov5StreamThread(json config, int id) {
   std::cout << "End of stream input: " << stream_name << std::endl;
 }
 
-REGSITER_STREAM(yolov5_demo, [](json config, int id) -> std::thread {
-  return std::thread(Yolov5StreamThread, config, id);
+REGSITER_STREAM(yolox_demo, [](json config, int id) -> std::thread {
+  return std::thread(YoloXStreamThread, config, id);
 });

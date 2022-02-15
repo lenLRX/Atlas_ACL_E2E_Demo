@@ -40,6 +40,8 @@
 [yolov4 模型转换文档](yolov4_model_cvt.md)
 ## YOLO V5 模型转换
 [yolov5 模型转换文档](yolov5_model_cvt.md)
+## YOLOX 模型转换
+[yolox 模型转换文档](yolox_model_cvt.md)
 ## DeepSort 模型转换
 [deepsort 模型转换文档](deep_sort_model_cvt.md)
 ## 运行测试

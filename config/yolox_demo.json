@@ -1,0 +1,19 @@
+{
+    "streams": [
+        {
+            "name": "yolox_demo_stream1",
+            "stream_type": "yolox_demo",
+            "src": "freecar.mp4",
+            "dst": "freecar_yolox_s.mp4",
+            "model_height" : 640,
+            "model_width" : 640,
+            "hw_encoder": true,
+            "enable_neon": true,
+            "yolox_model_path": "./model/yolox_s_truncate.om"
+        }
+    ],
+    "config": {
+        "app_perf": true,
+        "perflog_path": "."
+    }
+}
