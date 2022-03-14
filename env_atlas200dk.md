@@ -173,7 +173,7 @@ chmod +x Ascend-cann-nnrt_*-aarch64.run
 ### 安装依赖
 使用root用户安装以下依赖：
 ```
-apt install cmake git libopencv-dev fonts-droid-fallback libfreetype6-dev libspdlog-dev nlohmann-json-dev python3-dev python3-sklearn python3-numpy python3-opencv python3-pip
+apt install cmake git libopencv-dev fonts-droid-fallback libfreetype6-dev libspdlog-dev nlohmann-json-dev python3-dev python3-sklearn python3-numpy python3-opencv python3-pip libeigen3-dev
 ```
 使用root用户安装pytorch-cpu:
 ```
@@ -181,6 +181,12 @@ pip3 install -i https://pypi.tuna.tsinghua.edu.cn/simple pip --upgrade
 pip3 config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
 python3 -m pip install torch torchvision numpy --upgrade
 ```
+
+如果还需要使用bytetrack的python版本,还需要额外使用root用户安装以下依赖:
+```
+python3 -m pip install wheel scipy cython cython_bbox lap --upgrade
+```
+
 ### 下载并编译
 <b>以下操作使用HwHiAiUser账户</b>
 ```

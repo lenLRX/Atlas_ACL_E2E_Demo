@@ -21,12 +21,6 @@
 #include "vpc_batch_crop.h"
 #include "vpc_resize.h"
 
-#define CHECK_PY_ERR(obj)                                                      \
-  if (obj == NULL) {                                                           \
-    PyErr_Print();                                                             \
-    throw std::runtime_error("CHECK_PY_ERR");                                  \
-  }
-
 // https://github.com/numpy/numpy/issues/11925
 class PyEnv {
 public:

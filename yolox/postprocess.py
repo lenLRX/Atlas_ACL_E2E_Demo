@@ -63,8 +63,8 @@ def multiclass_nms_class_aware(boxes, scores, nms_thr, score_thr):
                     [valid_boxes[keep], valid_scores[keep, None], cls_inds], 1
                 )
                 final_dets.append(dets)
-    if len(final_dets) == 0:
-        return None
+    #if len(final_dets) == 0:
+    #    return None
     return np.concatenate(final_dets, 0)
 
 
@@ -74,16 +74,15 @@ def multiclass_nms_class_agnostic(boxes, scores, nms_thr, score_thr):
     cls_scores = scores[np.arange(len(cls_inds)), cls_inds]
 
     valid_score_mask = cls_scores > score_thr
-    if valid_score_mask.sum() == 0:
-        return None
+    #if valid_score_mask.sum() == 0:
+    #    return None
     valid_scores = cls_scores[valid_score_mask]
     valid_boxes = boxes[valid_score_mask]
     valid_cls_inds = cls_inds[valid_score_mask]
     keep = nms(valid_boxes, valid_scores, nms_thr)
-    if keep:
-        dets = np.concatenate(
-            [valid_boxes[keep], valid_scores[keep, None], valid_cls_inds[keep, None]], 1
-        )
+    dets = np.concatenate(
+        [valid_boxes[keep], valid_scores[keep, None], valid_cls_inds[keep, None]], 1
+    )
     return dets
 
 

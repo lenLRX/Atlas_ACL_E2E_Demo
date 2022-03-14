@@ -24,17 +24,11 @@
 #include "app_profiler.h"
 #include "dev_mem_pool.h"
 #include "device_manager.h"
+#include "focus_op.h"
 #include "signal_handler.h"
 #include "stream_factory.h"
 #include "task_node.h"
 #include "yolov5_stream.h"
-#include "focus_op.h"
-
-#define CHECK_PY_ERR(obj)                                                      \
-  if (obj == NULL) {                                                           \
-    PyErr_Print();                                                             \
-    throw std::runtime_error("CHECK_PY_ERR");                                  \
-  }
 
 // https://github.com/numpy/numpy/issues/11925
 class Yolov5PyEnv {
@@ -169,7 +163,6 @@ Yolov5PreProcess::ProcessWithoutNeon(Yolov5PreProcess::InTy bufferx2) {
   return {std::get<0>(bufferx2), dev_buffer_ptr};
 }
 
-
 Yolov5Model::Yolov5Model(const std::string &path, aclrtStream stream)
     : yolov5_model(stream), model_stream(stream) {
   yolov5_model.Init(path.c_str());
@@ -271,10 +264,11 @@ void Yolov5StreamThread(json config, int id) {
   std::string yolov5_version = "v5";
   if (config.count("yolov5_version")) {
     yolov5_version = config.at("yolov5_version").get<std::string>();
-  }
-  else {
-    std::cout << "yolov5 model version not set in json, default to \"v5\"" << std::endl;
-    std::cout << "\"yolov5_version\" available options: {\"v5\", \"v6\"}" << std::endl;
+  } else {
+    std::cout << "yolov5 model version not set in json, default to \"v5\""
+              << std::endl;
+    std::cout << "\"yolov5_version\" available options: {\"v5\", \"v6\"}"
+              << std::endl;
   }
 
   int model_height = config.at("model_height");
@@ -377,8 +371,7 @@ void Yolov5StreamThread(json config, int id) {
 
   if (yolov5_version == "v5") {
     yolov5_model_node.SetInputQueue(&yolov5_input_queue);
-  }
-  else {
+  } else {
     yolov5_model_node.SetInputQueue(&preprocess_input_queue);
   }
 

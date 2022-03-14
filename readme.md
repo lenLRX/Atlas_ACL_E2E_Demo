@@ -11,6 +11,8 @@
     * DVPP crop resize
 * ACL yolov4推理
 * ACL yolov5推理
+* ACL yoloX推理
+* ACL YOLOX+bytetrack多目标追踪
 * 在YUV420SP图像上的[画框](src/drawing.h)和[中文字符显示](src/freetype_helper.cpp)
 * [性能分析](profiling.md)
 
@@ -42,6 +44,8 @@
 [yolov5 模型转换文档](yolov5_model_cvt.md)
 ## YOLOX 模型转换
 [yolox 模型转换文档](yolox_model_cvt.md)
+## YOLOX+ByteTrack
+[yolox+bytetrack 模型转换文档](bytetrack_model_cvt.md)
 ## DeepSort 模型转换
 [deepsort 模型转换文档](deep_sort_model_cvt.md)
 ## 运行测试

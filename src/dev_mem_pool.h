@@ -13,7 +13,8 @@
 
 struct DevMemPoolEntry {
   DevMemPoolEntry() = default;
-  DevMemPoolEntry(void *p, size_t sz, int32_t dev_id) : dev_ptr_(p), size_(sz), dev_id_(dev_id) {}
+  DevMemPoolEntry(void *p, size_t sz, int32_t dev_id)
+      : dev_ptr_(p), size_(sz), dev_id_(dev_id) {}
   void *dev_ptr_;
   size_t size_;
   int32_t dev_id_;
@@ -137,9 +138,13 @@ private:
   std::mutex dev_mem_mtx_;
   std::mutex dvpp_mem_mtx_;
   std::unordered_map<void *, DevMemPoolEntry> dev_using_memory_;
-  std::unordered_map<int32_t, std::unordered_map<size_t, std::list<DevMemPoolEntry>>> dev_free_lists_;
+  std::unordered_map<int32_t,
+                     std::unordered_map<size_t, std::list<DevMemPoolEntry>>>
+      dev_free_lists_;
   std::unordered_map<void *, DevMemPoolEntry> dvpp_using_memory_;
-  std::unordered_map<int32_t, std::unordered_map<size_t, std::list<DevMemPoolEntry>>> dvpp_free_lists_;
+  std::unordered_map<int32_t,
+                     std::unordered_map<size_t, std::list<DevMemPoolEntry>>>
+      dvpp_free_lists_;
 };
 
 #endif //__DEV_MEM_POOL_H__

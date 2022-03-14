@@ -24,12 +24,6 @@
 #include "task_node.h"
 #include "yolov4_stream.h"
 
-#define CHECK_PY_ERR(obj)                                                      \
-  if (obj == NULL) {                                                           \
-    PyErr_Print();                                                             \
-    throw std::runtime_error("CHECK_PY_ERR");                                  \
-  }
-
 // https://github.com/numpy/numpy/issues/11925
 class Yolov4PyEnv {
 public:

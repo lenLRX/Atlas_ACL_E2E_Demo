@@ -1,0 +1,26 @@
+{
+    "streams": [
+        {
+            "name": "yolox_bytetrack_demo_stream1",
+            "stream_type": "yolox_bytetrack_demo",
+            "src": "Bangalore_Traffic_Intersection.mp4",
+            "dst": "Bangalore_Traffic_Intersection_bytetrack.mp4",
+            "model_height" : 640,
+            "model_width" : 640,
+            "model_box_num": 8400,
+            "model_class_num": 80,
+            "nms_thr": 0.7,
+            "score_thr": 0.1,
+            "mean": [0.0, 0.0, 0.0],
+            "std": [1.0, 1.0, 1.0],
+            "scale": 1.0,
+            "hw_encoder": true,
+            "enable_neon": true,
+            "bytetrack_model_path": "./model/yolox_s_truncate.om"
+        }
+    ],
+    "config": {
+        "app_perf": true,
+        "perflog_path": "."
+    }
+}

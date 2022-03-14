@@ -24,72 +24,16 @@
 #include "app_profiler.h"
 #include "dev_mem_pool.h"
 #include "device_manager.h"
+#include "focus_op.h"
 #include "signal_handler.h"
 #include "stream_factory.h"
 #include "task_node.h"
 #include "yolox_stream.h"
-#include "focus_op.h"
-
-#define CHECK_PY_ERR(obj)                                                      \
-  if (obj == NULL) {                                                           \
-    PyErr_Print();                                                             \
-    throw std::runtime_error("CHECK_PY_ERR");                                  \
-  }
-
-// https://github.com/numpy/numpy/issues/11925
-class YoloXPyEnv {
-public:
-  static YoloXPyEnv &GetInstance() {
-    static YoloXPyEnv env;
-    return env;
-  }
-
-  PyObject *GetPostProcessFn() const { return post_processing_fn; }
-
-private:
-  YoloXPyEnv() {
-    Py_Initialize();
-    { // expansion of macro import_array
-      if (_import_array() < 0) {
-        PyErr_Print();
-        PyErr_SetString(PyExc_ImportError,
-                        "numpy.core.multiarray failed to import");
-      }
-    }
-    numpy = PyImport_ImportModule("numpy");
-    yolox_module = PyImport_ImportModule("yolox");
-    if (yolox_module == NULL) {
-      PyErr_Print();
-      return;
-    }
-
-    post_processing_fn =
-        PyObject_GetAttrString(yolox_module, "post_processing");
-    if (post_processing_fn == NULL) {
-      PyErr_Print();
-      return;
-    }
-
-    PyEval_InitThreads();
-    _save = PyEval_SaveThread();
-  }
-
-  ~YoloXPyEnv() {
-    PyEval_RestoreThread(_save);
-    Py_FinalizeEx();
-  }
-
-  PyThreadState *_save;
-  PyObject *numpy;
-  PyObject *yolox_module;
-  PyObject *post_processing_fn;
-};
 
 using namespace std::chrono_literals;
 
-YoloXPreProcess::YoloXPreProcess(int w, int h, bool enable_neon)
-    : width(w), height(h), enable_neon(enable_neon) {}
-
+YoloXPreProcess::YoloXPreProcess(int w, int h, bool enable_neon, float scale)
+    : width(w), height(h), enable_neon(enable_neon), scale(scale) {}
 
 YoloXPreProcess::OutTy
 YoloXPreProcess::Process(YoloXPreProcess::InTy bufferx2) {
@@ -117,7 +61,7 @@ YoloXPreProcess::ProcessWithNeon(YoloXPreProcess::InTy bufferx2) {
       buf, input_size, DeviceBuffer::DevMemDeleter());
 
   CvtFocusNEONFuse(height, width, (float *)dev_buffer_ptr->GetHostPtr(),
-                   (uint8_t *)host_buffer, 1.0);
+                   (uint8_t *)host_buffer, scale);
 
   dev_buffer_ptr->CopyToDevice();
 
@@ -157,10 +101,9 @@ YoloXPreProcess::ProcessWithoutNeon(YoloXPreProcess::InTy bufferx2) {
     APP_PROFILE(IMG_U8_TO_FLOAT);
     focus_format_img.convertTo(output_float, CV_32FC3);
   }
-  // yolox does not need to scale
-  {
-    //APP_PROFILE(IMG_DIV_255);
-    //output_float *= 0.00392156862745098;
+  if (scale != 1.0) {
+    APP_PROFILE(IMG_SCALE);
+    output_float *= scale;
   }
 
   // FocusTransform<float>(height, width, (float*)dev_buffer_ptr->GetHostPtr(),
@@ -170,7 +113,6 @@ YoloXPreProcess::ProcessWithoutNeon(YoloXPreProcess::InTy bufferx2) {
 
   return {std::get<0>(bufferx2), dev_buffer_ptr};
 }
-
 
 YoloXModel::YoloXModel(const std::string &path, aclrtStream stream)
     : yolox_model(stream), model_stream(stream) {
@@ -186,8 +128,8 @@ YoloXModel::OutTy YoloXModel::Process(YoloXModel::InTy bufferx2) {
 }
 
 YoloXPostProcess::YoloXPostProcess(int width, int height, int model_width,
-                                     int model_height)
-    : width(width), height(height) {
+                                   int model_height, int box_num, int class_num)
+    : width(width), height(height), box_num(box_num), class_num(class_num) {
   h_ratio = height / (float)model_height;
   w_ratio = width / (float)model_width;
 }
@@ -202,7 +144,7 @@ YoloXPostProcess::OutTy YoloXPostProcess::Process(InTy input) {
 
   PyGILGuard py_gil_guard;
 
-  npy_intp pred_dim[3] = {1, 8400, 85};
+  npy_intp pred_dim[3] = {1, box_num, class_num + 5};
   const int pred_nd = 3;
 
   PyObject *pred_arr =
@@ -272,6 +214,17 @@ void YoloXStreamThread(json config, int id) {
 
   int model_height = config.at("model_height");
   int model_width = config.at("model_width");
+
+  int box_num = 8400;
+  if (config.count("model_box_num")) {
+    box_num = config.at("model_box_num");
+  }
+
+  int class_num = 80;
+  if (config.count("model_class_num")) {
+    class_num = config.at("model_class_num");
+  }
+
   bool is_null_output = output_addr == "null";
   bool hardware_enc = false;
   if (config.count("hw_encoder")) {
@@ -347,11 +300,10 @@ void YoloXStreamThread(json config, int id) {
   resize_engine_node.SetOutputQueue(&preprocess_input_queue);
   resize_engine_node.Start(ctx);
 
-  YoloXPreProcess yolox_preprocess(model_width, model_height, enable_neon);
+  YoloXPreProcess yolox_preprocess(model_width, model_height, enable_neon, 1.0);
 
   TaskNode<YoloXPreProcess, YoloXPreProcess::InTy, YoloXPreProcess::OutTy>
-      yolox_preprocess_node(&yolox_preprocess, "YoloxPreProcess",
-                             stream_name);
+      yolox_preprocess_node(&yolox_preprocess, "YoloxPreProcess", stream_name);
 
   ThreadSafeQueueWithCapacity<buf_tup_t> yolox_input_queue(queue_size);
 
@@ -363,15 +315,12 @@ void YoloXStreamThread(json config, int id) {
   CHECK_ACL(aclrtCreateStream(&model_stream));
   YoloXModel yolox_model(model_path, model_stream);
 
-  TaskNode<YoloXModel, YoloXModel::InTy, YoloXModel::OutTy>
-      yolox_model_node(&yolox_model, "YoloXModel", stream_name);
-
+  TaskNode<YoloXModel, YoloXModel::InTy, YoloXModel::OutTy> yolox_model_node(
+      &yolox_model, "YoloXModel", stream_name);
 
   yolox_model_node.SetInputQueue(&yolox_input_queue);
-  
 
-  ThreadSafeQueueWithCapacity<YoloXModel::OutTy> yolox_output_queue(
-      queue_size);
+  ThreadSafeQueueWithCapacity<YoloXModel::OutTy> yolox_output_queue(queue_size);
   yolox_model_node.SetOutputQueue(&yolox_output_queue);
   yolox_model_node.Start(ctx);
 
@@ -379,10 +328,10 @@ void YoloXStreamThread(json config, int id) {
   TaskNode<NullOutput<YoloXPostProcess::InTy>, YoloXPostProcess::InTy, void>
       null_out_node(&null_out, "NullOutput", stream_name);
 
-  ThreadSafeQueueWithCapacity<YoloXModel::OutTy> dummy_output_queue(
-      queue_size);
+  ThreadSafeQueueWithCapacity<YoloXModel::OutTy> dummy_output_queue(queue_size);
 
-  YoloXPostProcess post_process(width, height, model_width, model_height);
+  YoloXPostProcess post_process(width, height, model_width, model_height,
+                                box_num, class_num);
   TaskNode<YoloXPostProcess, YoloXPostProcess::InTy, YoloXPostProcess::OutTy>
       post_process_node(&post_process, "YoloXPostProcess", stream_name);
 
@@ -398,8 +347,8 @@ void YoloXStreamThread(json config, int id) {
 
   null_out_node.Start(ctx);
 
-  ThreadSafeQueueWithCapacity<YoloXPostProcess::OutTy>
-      yolox_post_output_queue(queue_size);
+  ThreadSafeQueueWithCapacity<YoloXPostProcess::OutTy> yolox_post_output_queue(
+      queue_size);
   post_process_node.SetOutputQueue(&yolox_post_output_queue);
   post_process_node.Start(ctx);
 

@@ -3,7 +3,6 @@
 
 #include "app_profiler.h"
 
-
 template <typename T>
 void FocusTransform(int height, int width, T *dst, T *src) {
   APP_PROFILE(FocusTransform);
@@ -45,9 +44,9 @@ void FocusTransformNEON(int height, int width, uint8_t *dst, uint8_t *src);
 
 void FocusTransformNEONFuse(int height, int width, float *dst, uint8_t *src);
 
-void CvtFocusNEONFuse(int height, int width, float *dst, uint8_t *src, float coeff=0.00392156862745098);
+void CvtFocusNEONFuse(int height, int width, float *dst, uint8_t *src,
+                      float coeff = 0.00392156862745098);
 
 void YUV420SP2RGBNEON(int height, int width, uint8_t *dst, uint8_t *src);
 
-
-#endif//__FOCUS_OP_H__
+#endif //__FOCUS_OP_H__

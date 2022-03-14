@@ -1,0 +1,26 @@
+{
+    "streams": [
+        {
+            "name": "yolox_bytetrack_demo_stream1",
+            "stream_type": "yolox_bytetrack_demo",
+            "src": "pedestrian_test_30fps.mp4",
+            "dst": "pedestrian_test_bytetrack.mp4",
+            "model_height" : 608,
+            "model_width" : 1088,
+            "model_box_num": 13566,
+            "model_class_num": 1,
+            "nms_thr": 0.7,
+            "score_thr": 0.1,
+            "mean": [0.485, 0.456, 0.406],
+            "std": [0.229, 0.224, 0.225],
+            "scale": 0.00392156862745098,
+            "hw_encoder": true,
+            "enable_neon": true,
+            "bytetrack_model_path": "./model/bytetrack_s_truncate.om"
+        }
+    ],
+    "config": {
+        "app_perf": true,
+        "perflog_path": "."
+    }
+}

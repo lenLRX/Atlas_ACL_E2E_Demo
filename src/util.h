@@ -17,6 +17,12 @@ using namespace std::chrono;
 
 #define AVC1_TAG 0x31637661
 
+#define CHECK_PY_ERR(obj)                                                      \
+  if (obj == NULL) {                                                           \
+    PyErr_Print();                                                             \
+    throw std::runtime_error("CHECK_PY_ERR");                                  \
+  }
+
 #define CHECK_ACL(x)                                                           \
   do {                                                                         \
     aclError __ret = x;                                                        \

@@ -1,6 +1,5 @@
 #include "focus_op.h"
 
-
 #ifdef __ARM_NEON
 
 #include <arm_neon.h>
@@ -297,7 +296,8 @@ void FocusTransformNEONFuse(int height, int width, float *dst, uint8_t *src) {
   // ofs.write((const char*)dst, height * width * 3 * sizeof(float));
 }
 
-void CvtFocusNEONFuse(int height, int width, float *dst, uint8_t *src, float coeff) {
+void CvtFocusNEONFuse(int height, int width, float *dst, uint8_t *src,
+                      float coeff) {
   APP_PROFILE(CvtFocusNEONFuse);
   uint8_t *Y_even_row_start = src;
   uint8_t *Y_odd_row_start = src + width;

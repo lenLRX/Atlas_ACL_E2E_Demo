@@ -4,7 +4,7 @@ sed -i "s@http://.*security.ubuntu.com@http://repo.huaweicloud.com@g" /etc/apt/s
 apt update
 
 apt install -y build-essential libpcre3 libpcre3-dev zlib1g-dev openssl libssl-dev
-apt install -y cmake git libopencv-dev fonts-droid-fallback libfreetype6-dev libspdlog-dev nlohmann-json-dev python3-dev python3-sklearn python3-numpy python3-opencv python3.7 python3.7-dev
+apt install -y cmake git libopencv-dev fonts-droid-fallback libfreetype6-dev libspdlog-dev nlohmann-json-dev python3-dev python3-sklearn python3-numpy python3-opencv python3.7 python3.7-dev libeigen3-dev
 
 pip3 install -i https://pypi.tuna.tsinghua.edu.cn/simple pip --upgrade
 pip3 config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
