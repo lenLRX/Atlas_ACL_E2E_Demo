@@ -15,7 +15,7 @@ python3 tools/export_onnx.py --opset=11 --output-name yolox_s.onnx -n yolox-s -c
 ```
 3. 修改onnx
    * 将[model/yolov5_remove_nodes.py](model/yolov5_remove_nodes.py)拷贝到前一步得到的onnx目录下
-   * 执行以下命令，将yolov5的focus层的slice和concate算子删除
+   * 执行以下命令，将YOLOX的focus层的slice和concate算子删除
 ```
 python yolov5_remove_nodes.py yolox_s.onnx -o yolox_s_truncate.onnx
 ```

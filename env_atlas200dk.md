@@ -184,7 +184,8 @@ python3 -m pip install torch torchvision numpy --upgrade
 
 如果还需要使用bytetrack的python版本,还需要额外使用root用户安装以下依赖:
 ```
-python3 -m pip install wheel scipy cython cython_bbox lap --upgrade
+python3 -m pip install cython --upgrade
+python3 -m pip install wheel scipy cython_bbox lap --upgrade
 ```
 
 ### 下载并编译

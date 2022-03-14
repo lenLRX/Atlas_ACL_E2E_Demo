@@ -23,7 +23,7 @@ python3 tools/export_onnx.py --output-name bytetrack_s.onnx -f exps/example/mot/
 ```
 3. 修改onnx
    * 将[model/yolov5_remove_nodes.py](model/yolov5_remove_nodes.py)拷贝到前一步得到的onnx目录下
-   * 执行以下命令，将yolov5的focus层的slice和concate算子删除
+   * 执行以下命令，将YOLOX的focus层的slice和concate算子删除
 ```
 python3 yolov5_remove_nodes.py bytetrack_s.onnx -o bytetrack_s_truncate.onnx
 ```
