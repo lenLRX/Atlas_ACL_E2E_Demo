@@ -493,7 +493,7 @@ void FocusTransformNEON(int height, int width, uint8_t *dst, uint8_t *src) {}
 
 void FocusTransformNEONFuse(int height, int width, float *dst, uint8_t *src) {}
 
-void CvtFocusNEONFuse(int height, int width, float *dst, uint8_t *src) {}
+void CvtFocusNEONFuse(int height, int width, float *dst, uint8_t *src, float coeff) {}
 
 void YUV420SP2RGBNEON(int height, int width, uint8_t *dst, uint8_t *src) {}
 
