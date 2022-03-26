@@ -7,6 +7,8 @@
             "dst": "freecar_yolov5_v5.mp4",
             "model_height" : 640,
             "model_width" : 640,
+            "model_box_num": 25220,
+            "model_class_num": 80,
             "hw_encoder": true,
             "enable_neon": true,
             "yolov5_version": "v5",

@@ -177,8 +177,8 @@ Yolov5Model::OutTy Yolov5Model::Process(Yolov5Model::InTy bufferx2) {
 }
 
 Yolov5PostProcess::Yolov5PostProcess(int width, int height, int model_width,
-                                     int model_height)
-    : width(width), height(height) {
+                                     int model_height, int box_num, int class_num)
+    : width(width), height(height), box_num(box_num), class_num(class_num) {
   h_ratio = height / (float)model_height;
   w_ratio = width / (float)model_width;
 }
@@ -193,7 +193,7 @@ Yolov5PostProcess::OutTy Yolov5PostProcess::Process(InTy input) {
 
   PyGILGuard py_gil_guard;
 
-  npy_intp pred_dim[3] = {1, 25200, 85};
+  npy_intp pred_dim[3] = {1, box_num, class_num + 5};
   const int pred_nd = 3;
 
   PyObject *pred_arr =
@@ -283,6 +283,9 @@ void Yolov5StreamThread(json config, int id) {
   if (config.count("enable_neon")) {
     enable_neon = config.at("enable_neon");
   }
+
+  int box_num = config.value<int>("model_box_num", 25220);
+  int class_num = config.value<int>("model_class_num", 80);
 
   std::string stream_name = StreamName(input_addr, id);
 
@@ -387,7 +390,7 @@ void Yolov5StreamThread(json config, int id) {
   ThreadSafeQueueWithCapacity<Yolov5Model::OutTy> dummy_output_queue(
       queue_size);
 
-  Yolov5PostProcess post_process(width, height, model_width, model_height);
+  Yolov5PostProcess post_process(width, height, model_width, model_height, box_num, class_num);
   TaskNode<Yolov5PostProcess, Yolov5PostProcess::InTy, Yolov5PostProcess::OutTy>
       post_process_node(&post_process, "Yolov5PostProcess", stream_name);
 
