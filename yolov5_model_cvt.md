@@ -20,6 +20,11 @@ pip install -U coremltools onnx scikit-learn==0.19.2
 ```
 python export.py --include onnx --weights yolov5s.pt --img 640 --batch 1 --opset=11
 ```
+如果报错 `AttributeError: 'Upsample' object has no attribute 'recompute_scale_factor'`([issue 50](https://github.com/lenLRX/Atlas_ACL_E2E_Demo/issues/50))，可以降级一下 torch 和 torchvision 的版本：
+```
+pip install torch==1.9.0
+pip install torchvision==0.10.0
+```
 3. 使用atc转换模型
 将[model/yuv420sp_aipp.cfg](model/yuv420sp_aipp.cfg)拷贝到yolov5文件夹下，使用atc转换模型。
 ```
