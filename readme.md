@@ -1,4 +1,4 @@
-# ACL多路端到端推理样例
+# ACL多路端到端推理样例(现已支持[OrangePi](http://www.orangepi.cn/html/hardWare/computerAndMicrocontrollers/service-and-support/Orange-Pi-AIpro(20T).html))
 这个demo主要包括以下功能点 
 * ffmpeg RTSP/mp4/摄像头视频流输入
 * ffmpeg RTMP/RTSP/mp4视频流输出
@@ -17,10 +17,13 @@
 * [性能分析](profiling.md)
 
 ## 支持硬件
+* OrangePi
 * Atlas200DK
 * Atlas300I
 
 ## 支持软件版本
+* OrangePi:
+  * 7.0.0+
 * Atlas200DK:
   * 20.0
   * 20.1
@@ -34,6 +37,7 @@
   * 5.0.5.alpha001(华为云镜像环境)
 
 ## 环境搭建
+* [环境搭建文档(OrangePi)](env_orange_pi.md)
 * [环境搭建文档(Atlas200DK)](env_atlas200dk.md)
 * [环境搭建文档(Atlas300I)](env_atlas300I.md)
 ## YOLO V3 模型转换
