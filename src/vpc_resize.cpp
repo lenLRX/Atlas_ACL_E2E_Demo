@@ -20,6 +20,7 @@ aclError VPCResizeEngine::Init(int input_h, int input_w, int output_h,
   CHECK_ACL(acldvppCreateChannel(channel_desc));
   input_buffer_size = yuv420sp_size(align_up(src_h, 2), align_up(src_w, 16));
   output_buffer_size = yuv420sp_size(dst_h, dst_w);
+  return ACL_ERROR_NONE;
 }
 
 VPCResizeEngine::~VPCResizeEngine() {}

@@ -40,6 +40,7 @@ aclError VPCBatchCrop::Init(int src_h, int src_w) {
   CHECK_ACL(acldvppSetPicDescHeightStride(input_desc, align_up(src_h, 2)));
   CHECK_ACL(acldvppSetPicDescSize(input_desc, input_buffer_size));
   */
+  return ACL_ERROR_NONE;
 }
 
 aclError VPCBatchCrop::Crop(uint8_t *src_buffer, int *x1, int *y1, int *x2,

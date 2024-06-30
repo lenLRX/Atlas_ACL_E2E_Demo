@@ -192,6 +192,7 @@ h264_ffmpeg_profile_to_acl_stream_fromat(int profile) {
   case 100: // h264 high level
     return H264_HIGH_LEVEL;
   }
+  return H264_MAIN_LEVEL;
 }
 
 static int ParseCameraInput(const std::string &addr) {

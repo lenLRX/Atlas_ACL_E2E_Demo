@@ -1,2 +1,7 @@
 .vscode/
 build/
+*.mp4
+*.json
+**/*.onnx
+**/*.om
+**/__pycache__/

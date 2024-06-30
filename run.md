@@ -3,7 +3,10 @@
 ## 运行demo方式
 执行以下命令运行demo
 ```
+# Atlas200DK/Atlas300I
 ./run.sh config/yolov3_demo.json
+# OrangePi
+./run_orange_pi.sh config/yolov3_demo.json
 ```
 按下ctrl+c可以停止demo。
 

@@ -123,6 +123,7 @@ aclError DvppEncoder::SendFrame(uint8_t *data) {
   CHECK_ACL(acldvppSetPicDescHeightStride(pic_desc, height));
   CHECK_ACL(
       aclvencSendFrame(channel_desc, pic_desc, nullptr, frame_config, this));
+  return ACL_ERROR_NONE;
 }
 
 void DvppEncoder::Process(DeviceBufferPtr buffer) {

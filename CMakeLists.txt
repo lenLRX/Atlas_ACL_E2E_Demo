@@ -54,7 +54,19 @@ else ()
         message(STATUS "set ACL_PATH to default path: /home/HwHiAiUser/Ascend/acllib")    
 endif()
 
+
 #Header path
+if (${ATLAS_DEVICE} STREQUAL "OrangePi")
+include_directories(
+	/usr/local/Ascend/include # for peripheral_api.h
+	${ACL_PATH}/include # acl hearders
+	/usr/local/miniconda3/include/python3.9 # for orange pi python headers
+        /usr/local/miniconda3/lib/python3.9/site-packages/numpy/core/include/ # for orange pi pip installed numpy headers
+	/usr/include/opencv4/ # for orange pi
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/bytetrack_csrc/include
+        ${FREETYPE_INCLUDE_DIRS})
+else()
 include_directories(
 	/usr/local/Ascend/include # for peripheral_api.h
 	${ACL_PATH}/include # acl hearders
@@ -63,16 +75,25 @@ include_directories(
         ${CMAKE_SOURCE_DIR}/src
         ${CMAKE_SOURCE_DIR}/bytetrack_csrc/include
         ${FREETYPE_INCLUDE_DIRS})
+endif()
 
 if(BUILD_DEEP_SORT)
     include_directories(/usr/include/python3.6)
 endif(BUILD_DEEP_SORT)
 
+if (${ATLAS_DEVICE} STREQUAL "OrangePi")
 #add host lib path
+link_directories(
+	/usr/local/miniconda3/lib/
+	/usr/lib64/
+	${ACL_PATH}/lib64/
+)
+else()
 link_directories(
 	/usr/lib64/
 	${ACL_PATH}/lib64/
 )
+endif()
 
 set(DEMO_LIB_SRC
         src/dvpp_decoder.cpp
@@ -122,8 +143,14 @@ set(DEMO_DEP_LIBS
         avformat
         avutil
         avcodec
-        python3.6m
         ${FREETYPE_LIBRARIES})
+
+
+if (${ATLAS_DEVICE} STREQUAL "OrangePi")
+list(APPEND DEMO_DEP_LIBS python3.9)
+else()
+list(APPEND DEMO_DEP_LIBS python3.6m)
+endif()
 
 if (${ATLAS_DEVICE} STREQUAL "Atlas200DK")
         set(DEMO_DEP_LIBS

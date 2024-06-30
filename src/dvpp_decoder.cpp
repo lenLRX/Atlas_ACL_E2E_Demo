@@ -59,6 +59,7 @@ aclError DvppDecoder::Init(const pthread_t thread_id, int h, int w,
   // CHECK_ACL(aclvdecSetChannelDescRefFrameNum(channel_desc, 1));
   CHECK_ACL(aclvdecSetChannelDescOutMode(channel_desc, 0));
   aclvdecCreateChannel(channel_desc);
+  return ACL_ERROR_NONE;
 }
 
 int DvppDecoder::GetChannelId() {
